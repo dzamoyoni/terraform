@@ -1,0 +1,144 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: istio-alb-ingress
+  namespace: kube-system
+  annotations:
+    # ALB Configuration
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    
+    # SSL and Certificate Configuration
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 30080}, {"HTTPS": 30443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '30443'
+    
+    # Multiple SSL Certificates - Both certificates properly formatted
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:101886104835:certificate/b72fe267-628d-4d80-9fd1-5e9efff798ab,arn:aws:acm:us-east-1:101886104835:certificate/4039bf77-8528-4cac-a8f3-4c1d5a19b58b"
+    
+    # Health check configuration
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz/ready
+    alb.ingress.kubernetes.io/healthcheck-port: '15021'
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '30'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '10'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    
+    # Load Balancer Configuration
+    alb.ingress.kubernetes.io/load-balancer-name: istio-alb
+    alb.ingress.kubernetes.io/target-group-attributes: |
+      stickiness.enabled=false,
+      deregistration_delay.timeout_seconds=60,
+      stickiness.type=lb_cookie,
+      stickiness.lb_cookie.duration_seconds=86400
+    
+    # Tags for cost allocation and management
+    alb.ingress.kubernetes.io/tags: |
+      Environment=production,
+      Component=istio-gateway,
+      ManagedBy=terraform,
+      Purpose=multi-tenant-ingress
+      
+spec:
+  rules:
+  # Ezra.world tenant
+  - host: api-test.ezra.world
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: istio-ingressgateway
+            port:
+              number: 80
+  - host: "*.ezra.world"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: istio-ingressgateway
+            port:
+              number: 80
+              
+  # Stacai.ai tenant  
+  - host: api-test.stacai.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: istio-ingressgateway
+            port:
+              number: 80
+  - host: "*.stacai.ai"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: istio-ingressgateway
+            port:
+              number: 80
+              
+  # Add more tenants as needed
+  # - host: api-test.anotherclient.com
+  #   http:
+  #     paths:
+  #     - path: /
+  #       pathType: Prefix
+  #       backend:
+  #         service:
+  #           name: istio-ingressgateway
+  #           port:
+  #             number: 80
+---
+# Optional: Create an internal ALB for internal services
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: istio-internal-alb-ingress
+#   namespace: istio-system
+#   annotations:
+#     kubernetes.io/ingress.class: alb
+#     alb.ingress.kubernetes.io/scheme: internal
+#     # alb.ingress.kubernetes.io/target-type: ip
+#     alb.ingress.kubernetes.io/backend-protocol: HTTPS
+#     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 30080}, {"HTTPS": 30443}]'
+#     alb.ingress.kubernetes.io/load-balancer-name: istio-internal-alb
+#     alb.ingress.kubernetes.io/healthcheck-path: /healthz/ready
+#     alb.ingress.kubernetes.io/healthcheck-port: '15021'
+#     alb.ingress.kubernetes.io/tags: |
+#       Environment=production,
+#       Component=istio-gateway-internal,
+#       ManagedBy=terraform,
+#       Purpose=internal-services
+# spec:
+#   rules:
+#   # Internal services for each tenant
+#   - host: *.ezra.world
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: istio-ingressgateway
+#             port:
+#               number: 80
+#   - host: *.stacai.ai
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: istio-ingressgateway
+#             port:
+#               number: 80
