@@ -4,7 +4,7 @@
 # This module provides foundational networking and security infrastructure
 # for multi-tenant architecture with two operational modes:
 #
-# IMPORT MODE: References existing infrastructure (us-east-1)
+# IMPORT MODE: References existing infrastructure
 # CREATE MODE: Creates new infrastructure (future regions)
 #
 # Both modes provide identical SSM parameter outputs for consistency.

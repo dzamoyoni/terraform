@@ -54,6 +54,12 @@ variable "extra_env_vars" {
   default     = {}
 }
 
+variable "zone_id_filters" {
+  description = "List of Route53 hosted zone IDs that External DNS should manage. If empty, manages all zones for the domain filters."
+  type        = list(string)
+  default     = []
+}
+
 variable "resources" {
   description = "Resource requests and limits for External DNS pods"
   type = object({

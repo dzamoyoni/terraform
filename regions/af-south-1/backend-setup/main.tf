@@ -1,4 +1,4 @@
-# 🔒 CRITICAL INFRASTRUCTURE - S3 Backend Setup
+# CRITICAL INFRASTRUCTURE - S3 Backend Setup
 # DO NOT DELETE OR MODIFY WITHOUT PROPER AUTHORIZATION
 # This bucket stores Terraform state for PRODUCTION infrastructure
 
@@ -133,7 +133,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
   }
 }
 
-# 🚫 ULTRA-RESTRICTIVE BUCKET POLICY
+# ULTRA-RESTRICTIVE BUCKET POLICY
 resource "aws_s3_bucket_policy" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -258,7 +258,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
-# 📊 OUTPUTS FOR REFERENCE
+# OUTPUTS FOR REFERENCE
 output "s3_bucket_name" {
   description = "Name of the Terraform state S3 bucket"
   value       = aws_s3_bucket.terraform_state.id

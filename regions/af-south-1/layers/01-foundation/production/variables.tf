@@ -1,4 +1,4 @@
-# 📝 Variables for Foundation Layer - AF-South-1 Production
+#  Variables for Foundation Layer - AF-South-1 Production
 
 # Project Configuration
 variable "project_name" {
@@ -83,7 +83,8 @@ variable "management_cidr_blocks" {
   type        = list(string)
   default     = [  
     "178.162.141.130/32",  # Primary connection
-    "165.90.14.138/32"     # Secondary connection
+    "165.90.14.138/32",    # Secondary connection
+    "41.72.206.78/32"     
   ]
 }
 

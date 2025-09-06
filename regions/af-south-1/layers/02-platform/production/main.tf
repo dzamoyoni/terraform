@@ -47,7 +47,7 @@ data "terraform_remote_state" "foundation" {
   backend = "s3"
   config = {
     bucket = var.terraform_state_bucket
-    key    = "layers/foundation/${var.region}/${var.environment}/terraform.tfstate"
+    key    = "regions/${var.region}/layers/01-foundation/${var.environment}/terraform.tfstate"
     region = var.terraform_state_region
   }
 }

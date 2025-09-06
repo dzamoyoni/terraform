@@ -45,7 +45,9 @@ variable "management_cidr_blocks" {
   type        = list(string)
   default     = [
     "178.162.141.130/32",  # Primary management IP
-    "165.90.14.138/32"     # Secondary management IP
+    "165.90.14.138/32",    # Secondary management IP
+    "41.72.206.78/32" ,
+    "102.217.4.85/32"     # Your IP address for cluster access
   ]
 }
 

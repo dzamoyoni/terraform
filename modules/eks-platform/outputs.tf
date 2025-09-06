@@ -95,7 +95,7 @@ output "node_security_group_id" {
   value       = module.eks.node_security_group_id
 }
 
-# 📊 CPTWN PLATFORM SUMMARY
+# CPTWN PLATFORM SUMMARY
 output "platform_summary" {
   description = "Comprehensive summary of the CPTWN EKS platform deployment"
   value = {
@@ -139,7 +139,7 @@ output "platform_summary" {
     
     # CPTWN standards applied
     cptwn_standards = {
-      naming_convention    = "applied"
+      naming_convention   = "applied"
       tagging_standards   = "applied"
       security_hardening  = "applied"
       monitoring_enabled  = "applied"

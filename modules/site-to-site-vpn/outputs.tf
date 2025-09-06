@@ -1,4 +1,4 @@
-# 📊 Outputs for Site-to-Site VPN Module
+# Outputs for Site-to-Site VPN Module
 
 # Customer Gateway Information
 output "customer_gateway_id" {

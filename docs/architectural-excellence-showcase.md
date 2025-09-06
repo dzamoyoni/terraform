@@ -69,7 +69,7 @@ Client Isolation Strategy:
 #### **⚡ Layer 02: Platform (Kubernetes Excellence)**
 ```yaml
 EKS Cluster: cptwn-eks-01
-Version: 1.30 (Latest stable)
+Version: 1.31 (Latest stable)
 Control Plane: Fully managed, highly available
 Node Groups: Client-specific with affinity
 

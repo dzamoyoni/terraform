@@ -12,12 +12,12 @@ This directory contains reusable Terraform modules for building scalable, multi-
 - **`external-dns`** - External DNS for Route53 automation
 - **`external-dns-irsa`** - IRSA role and policies for External DNS
 - **`ingress-class`** - Kubernetes ingress class configuration
-- **`istio`** - 🚀 **Istio Service Mesh** - Complete ambient mesh deployment with gateways
+- **`istio`** - **Istio Service Mesh** - Complete ambient mesh deployment with gateways
 - **`route53-zones`** - Route53 hosted zones management
 
 ### **Cluster & Compute**
 - **`eks-cluster`** - EKS cluster with proper configuration
-- **`multi-client-nodegroups`** - 🎯 **Primary nodegroup module** - Multi-tenant node groups with client isolation
+- **`multi-client-nodegroups`**  **Primary nodegroup module** - Multi-tenant node groups with client isolation
 - **`vpc`** - VPC with public/private subnets
 
 ### **Client & Application**

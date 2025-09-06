@@ -1,7 +1,7 @@
-# 🏗️ CPTWN EKS Cluster Wrapper Module - Variables
+# CPTWN EKS Cluster Wrapper Module - Variables
 # Standardized inputs for consistent EKS deployments across all CPTWN environments
 
-# 🌍 CORE CONFIGURATION
+# CORE CONFIGURATION
 variable "project_name" {
   description = "CPTWN project name for resource naming"
   type        = string
@@ -36,7 +36,7 @@ variable "cluster_version" {
   }
 }
 
-# 🌐 NETWORK CONFIGURATION (from foundation layer)
+# NETWORK CONFIGURATION (from foundation layer)
 variable "vpc_id" {
   description = "VPC ID from foundation layer"
   type        = string
@@ -47,7 +47,7 @@ variable "platform_subnet_ids" {
   type        = list(string)
 }
 
-# 🔐 SECURITY CONFIGURATION
+# SECURITY CONFIGURATION
 variable "enable_public_access" {
   description = "Enable public endpoint access"
   type        = bool
@@ -70,7 +70,7 @@ variable "log_retention_days" {
   }
 }
 
-# 👥 NODE GROUPS CONFIGURATION
+# NODE GROUPS CONFIGURATION
 variable "node_groups" {
   description = "Map of EKS managed node group definitions"
   type = map(object({
@@ -107,7 +107,7 @@ variable "node_groups" {
   }
 }
 
-# 🔐 ACCESS CONFIGURATION
+# ACCESS CONFIGURATION
 variable "access_entries" {
   description = "Map of access entries for the cluster"
   type = map(object({
@@ -124,7 +124,7 @@ variable "access_entries" {
   default = {}
 }
 
-# 🏷️ ADDITIONAL TAGS
+# ADDITIONAL TAGS
 variable "additional_tags" {
   description = "Additional tags to apply to all resources"
   type        = map(string)

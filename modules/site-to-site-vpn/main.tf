@@ -1,4 +1,4 @@
-# 🔗 Site-to-Site VPN Module - Secure On-Premises Connectivity
+# Site-to-Site VPN Module - Secure On-Premises Connectivity
 # Provides secure IPsec VPN connection to on-premises infrastructure
 
 terraform {
@@ -11,7 +11,7 @@ terraform {
   }
 }
 
-# 🏢 CUSTOMER GATEWAY - On-Premises Side
+# CUSTOMER GATEWAY - On-Premises Side
 resource "aws_customer_gateway" "main" {
   count = var.enabled ? 1 : 0
   
@@ -31,7 +31,7 @@ resource "aws_customer_gateway" "main" {
   # }
 }
 
-# 🌐 VIRTUAL PRIVATE GATEWAY - AWS Side  
+# VIRTUAL PRIVATE GATEWAY - AWS Side  
 resource "aws_vpn_gateway" "main" {
   count = var.enabled ? 1 : 0
   
@@ -50,7 +50,7 @@ resource "aws_vpn_gateway" "main" {
   # }
 }
 
-# 🔗 VPN CONNECTION - IPsec Tunnels
+# VPN CONNECTION - IPsec Tunnels
 resource "aws_vpn_connection" "main" {
   count = var.enabled ? 1 : 0
   
@@ -87,7 +87,7 @@ resource "aws_vpn_connection" "main" {
   # }
 }
 
-# 📋 VPN CONNECTION ROUTE - Static Routes (if enabled)
+# VPN CONNECTION ROUTE - Static Routes (if enabled)
 resource "aws_vpn_connection_route" "onprem" {
   count = var.enabled && var.static_routes_only ? length(var.onprem_cidr_blocks) : 0
   
@@ -99,7 +99,7 @@ resource "aws_vpn_connection_route" "onprem" {
   # }
 }
 
-# 📋 VPN GATEWAY ROUTE PROPAGATION - For Platform Subnets
+# VPN GATEWAY ROUTE PROPAGATION - For Platform Subnets
 resource "aws_vpn_gateway_route_propagation" "platform" {
   count = var.enabled && !var.static_routes_only ? length(var.platform_route_table_ids) : 0
   
@@ -111,7 +111,7 @@ resource "aws_vpn_gateway_route_propagation" "platform" {
   # }
 }
 
-# 📋 VPN GATEWAY ROUTE PROPAGATION - For Client Route Tables
+# VPN GATEWAY ROUTE PROPAGATION - For Client Route Tables
 resource "aws_vpn_gateway_route_propagation" "clients" {
   count = var.enabled && !var.static_routes_only ? length(var.client_route_table_ids) : 0
   
@@ -123,7 +123,7 @@ resource "aws_vpn_gateway_route_propagation" "clients" {
   # }
 }
 
-# 📊 CLOUDWATCH LOG GROUP for VPN Connection Logs
+# CLOUDWATCH LOG GROUP for VPN Connection Logs
 resource "aws_cloudwatch_log_group" "vpn" {
   count = var.enabled && var.enable_vpn_logging ? 1 : 0
   
@@ -141,7 +141,7 @@ resource "aws_cloudwatch_log_group" "vpn" {
   # }
 }
 
-# 🚨 CLOUDWATCH ALARMS for VPN Monitoring
+# CLOUDWATCH ALARMS for VPN Monitoring
 resource "aws_cloudwatch_metric_alarm" "vpn_tunnel_1_state" {
   count = var.enabled ? 1 : 0
   

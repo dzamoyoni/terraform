@@ -1,4 +1,4 @@
-# 📊 Outputs for Foundation Layer - AF-South-1 Production
+# Outputs for Foundation Layer - AF-South-1 Production
 
 # VPC Information
 output "vpc_id" {
@@ -167,7 +167,7 @@ output "foundation_summary" {
   }
 }
 
-# 🔒 SECURITY NOTICE
+#  SECURITY NOTICE
 output "security_notice" {
   description = "Critical security and next steps information"
   value = <<-EOT

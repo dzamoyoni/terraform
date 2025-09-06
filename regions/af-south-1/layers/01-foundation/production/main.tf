@@ -34,12 +34,12 @@ provider "aws" {
   }
 }
 
-# 📊 DATA SOURCES
+#  DATA SOURCES
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# 🌐 VPC FOUNDATION - Dual NAT Gateway Setup
+#  VPC FOUNDATION - Dual NAT Gateway Setup
 module "vpc_foundation" {
   source = "../../../../../modules/vpc-foundation"
   
@@ -63,7 +63,7 @@ module "vpc_foundation" {
   }
 }
 
-# 🏢 MTN GHANA PROD CLIENT SUBNETS - Perfect Isolation
+#  MTN GHANA PROD CLIENT SUBNETS - Perfect Isolation
 module "client_subnets_mtn_ghana_prod" {
   source = "../../../../../modules/client-subnets"
   
@@ -96,7 +96,7 @@ module "client_subnets_mtn_ghana_prod" {
   depends_on = [module.vpc_foundation]
 }
 
-# 🏢 ORANGE MADAGASCAR PROD CLIENT SUBNETS - Perfect Isolation
+#  ORANGE MADAGASCAR PROD CLIENT SUBNETS - Perfect Isolation
 module "client_subnets_orange_madagascar_prod" {
   source = "../../../../../modules/client-subnets"
   
@@ -176,7 +176,7 @@ module "vpn_connections" {
   depends_on = [module.vpc_foundation]
 }
 
-# 🔄 LOCALS for computed values
+#  LOCALS for computed values
 locals {
   # Use first 2 AZs for high availability
   availability_zones = slice(data.aws_availability_zones.available.names, 0, 2)

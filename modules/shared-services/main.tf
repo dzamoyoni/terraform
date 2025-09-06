@@ -1,4 +1,4 @@
-# 🚀 CPTWN Shared Services Wrapper Module
+# CPTWN Shared Services Wrapper Module
 # Deploys essential Kubernetes services following CPTWN standards
 # Services: Cluster Autoscaler, AWS Load Balancer Controller, Metrics Server, External DNS
 
@@ -20,7 +20,7 @@ terraform {
   }
 }
 
-# 🔍 LOCALS - CPTWN Standards and Configuration
+# LOCALS - CPTWN Standards and Configuration
 locals {
   # CPTWN standard tags applied to all resources
   cptwn_tags = merge(
@@ -49,10 +49,10 @@ locals {
   oidc_provider_id = replace(var.cluster_oidc_issuer_url, "https://oidc.eks.${var.region}.amazonaws.com/id/", "")
 }
 
-# 📊 DATA SOURCES
+#  DATA SOURCES
 data "aws_caller_identity" "current" {}
 
-# 🔄 CLUSTER AUTOSCALER
+# CLUSTER AUTOSCALER
 module "cluster_autoscaler" {
   count  = var.enable_cluster_autoscaler ? 1 : 0
   source = "./cluster-autoscaler"
@@ -80,7 +80,7 @@ module "cluster_autoscaler" {
   tags = local.cptwn_tags
 }
 
-# 🎯 AWS LOAD BALANCER CONTROLLER
+# AWS LOAD BALANCER CONTROLLER
 module "aws_load_balancer_controller" {
   count  = var.enable_aws_load_balancer_controller ? 1 : 0
   source = "./aws-load-balancer-controller"
@@ -103,7 +103,7 @@ module "aws_load_balancer_controller" {
   tags = local.cptwn_tags
 }
 
-# 📊 METRICS SERVER
+# METRICS SERVER
 resource "helm_release" "metrics_server" {
   count = var.enable_metrics_server ? 1 : 0
   

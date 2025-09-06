@@ -1,149 +1,183 @@
-# ============================================================================
-# Foundation Layer (01-foundation/production)
-# ============================================================================
-# This layer provides the foundational infrastructure for the multi-tenant 
-# architecture including:
-# - VPC and networking (public/private subnets, NAT gateway)
-# - Security groups for different service types
-# - VPN connections for secure client access
-# - SSM parameters for cross-layer communication
-#
-# This layer must be deployed first before other layers can reference
-# its outputs via SSM parameters.
-# ============================================================================
+# 🏗️ Foundation Layer - US-East-1 Production
+# CRITICAL INFRASTRUCTURE: VPC, Subnets, NAT Gateways, VPN
+# DO NOT DELETE OR MODIFY WITHOUT PROPER AUTHORIZATION
 
 terraform {
-  required_version = ">= 1.5.0"
-  
+  required_version = ">= 1.5"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
   }
-
+  
   backend "s3" {
-    # Backend configuration will be provided via -backend-config
+    # Backend configuration loaded from file
   }
 }
 
-# Configure AWS Provider
 provider "aws" {
-  region = var.aws_region
+  region = var.region
   
   default_tags {
     tags = {
-      Environment   = var.environment
-      Layer        = "foundation"
-      ManagedBy    = "terraform"
-      Repository   = "infrastructure"
+      Project            = "US-East-1-Multi-Client-EKS"
+      Environment        = var.environment
+      ManagedBy         = "Terraform"
+      CriticalInfra     = "true"
+      BackupRequired    = "true"
+      SecurityLevel     = "High"
+      Region            = var.region
+      Layer             = "Foundation"
+      DeploymentPhase   = "Phase-1"
     }
   }
 }
 
-# Get current region and availability zones
-data "aws_region" "current" {}
-
+# 📊 DATA SOURCES
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# ============================================================================
-# Foundation Layer Implementation
-# ============================================================================
-
-module "foundation" {
-  source = "../../../../../modules/foundation-layer"
-
-  # Mode Configuration - IMPORT MODE for existing infrastructure
-  import_mode = true  # Explicitly use import mode
-
-  # General Configuration
+# 🌐 VPC FOUNDATION - Dual NAT Gateway Setup
+module "vpc_foundation" {
+  source = "../../../../../modules/vpc-foundation"
+  
+  project_name       = var.project_name
   environment        = var.environment
-  vpc_name          = var.vpc_name
-  cluster_name      = var.cluster_name
-  aws_region        = var.aws_region
-  availability_zones = var.availability_zones
-
-  # EXISTING Infrastructure - Your current setup (NO MODIFICATIONS)
-  existing_vpc_id               = var.existing_vpc_id
-  existing_private_subnet_ids   = var.existing_private_subnet_ids
-  existing_public_subnet_ids    = var.existing_public_subnet_ids
-  existing_igw_id              = var.existing_igw_id
-  existing_nat_gateway_ids     = var.existing_nat_gateway_ids
-  existing_vpn_gateway_id      = var.existing_vpn_gateway_id
-
-  # Security Groups - use existing ones (NO NEW SECURITY GROUPS)
-  create_security_groups       = false  # Use existing security groups
-  existing_eks_cluster_sg_id   = var.existing_eks_cluster_sg_id
-  existing_database_sg_id      = var.existing_database_sg_id
-  existing_alb_sg_id           = var.existing_alb_sg_id
-
-  # Common tags for SSM parameters only
+  region             = var.region
+  vpc_cidr          = var.vpc_cidr
+  availability_zones = local.availability_zones
+  
+  enable_vpc_flow_logs     = true
+  flow_log_retention_days  = 30
+  enable_vpc_endpoints     = true
+  
   common_tags = {
-    Environment   = var.environment
-    Region        = var.aws_region
-    Layer         = "foundation"
-    ManagedBy     = "terraform"
-    Repository    = "infrastructure"
-    ImportMode    = "true"
-    # Add cluster tagging for existing EKS integration
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    Project            = "US-East-1-Multi-Client-EKS"
+    Environment        = var.environment
+    ManagedBy         = "Terraform"
+    CriticalInfra     = "true"
+    Layer             = "Foundation"
+    DeploymentPhase   = "Phase-1"
   }
 }
 
-# ============================================================================
-# Foundation Layer Outputs to SSM (Additional Parameters)
-# ============================================================================
-# Store additional metadata for other layers to consume
-
-resource "aws_ssm_parameter" "foundation_deployed" {
-  name  = "/terraform/${var.environment}/foundation/deployed"
-  type  = "String"
-  value = "true"
-
-  tags = {
-    Environment = var.environment
-    Layer      = "foundation"
-    ManagedBy  = "terraform"
+# 🏢 EZRA FINTECH PROD CLIENT SUBNETS - Perfect Isolation
+module "client_subnets_ezra_fintech_prod" {
+  source = "../../../../../modules/client-subnets"
+  
+  enabled            = true
+  project_name       = var.project_name
+  client_name        = "ezra-fintech-prod"
+  vpc_id            = module.vpc_foundation.vpc_id
+  client_cidr_block = "172.20.12.0/22"  # 4,094 IPs for Ezra Fintech Prod - Non-conflicting range
+  availability_zones = local.availability_zones
+  nat_gateway_ids   = module.vpc_foundation.nat_gateway_ids
+  cluster_name      = "${var.project_name}-cluster"
+  
+  management_cidr_blocks = var.management_cidr_blocks
+  custom_ports          = [8080, 9000, 3000, 5000]
+  database_ports        = [5432, 5433, 5434, 5435]  # PostgreSQL custom ports
+  
+  # VPN gateway will be available after VPN module creates it
+  vpn_gateway_id = null  # Will be updated after VPN deployment
+  
+  common_tags = {
+    Project            = "US-East-1-Multi-Client-EKS"
+    Environment        = var.environment
+    ManagedBy         = "Terraform"
+    CriticalInfra     = "true"
+    Layer             = "Foundation"
+    Client            = "ezra-fintech-prod"
+    DeploymentPhase   = "Phase-1"
   }
-
-  depends_on = [module.foundation]
+  
+  depends_on = [module.vpc_foundation]
 }
 
-resource "aws_ssm_parameter" "foundation_version" {
-  name  = "/terraform/${var.environment}/foundation/version"
-  type  = "String"
-  value = "1.0.0"
-
-  tags = {
-    Environment = var.environment
-    Layer      = "foundation"
-    ManagedBy  = "terraform"
+# 🏢 MTN GHANA PROD CLIENT SUBNETS - Perfect Isolation
+module "client_subnets_mtn_ghana_prod" {
+  source = "../../../../../modules/client-subnets"
+  
+  enabled            = true
+  project_name       = var.project_name
+  client_name        = "mtn-ghana-prod"
+  vpc_id            = module.vpc_foundation.vpc_id
+  client_cidr_block = "172.20.16.0/22"  # 4,094 IPs for MTN Ghana Prod - Non-conflicting range
+  availability_zones = local.availability_zones
+  nat_gateway_ids   = module.vpc_foundation.nat_gateway_ids
+  cluster_name      = "${var.project_name}-cluster"
+  
+  management_cidr_blocks = var.management_cidr_blocks
+  custom_ports          = [8080, 9000, 3000, 5000]
+  database_ports        = [5432, 5433, 5434, 5435]  # PostgreSQL custom ports
+  
+  # VPN gateway will be available after VPN deployment
+  vpn_gateway_id = null  # Will be updated after VPN deployment
+  
+  common_tags = {
+    Project            = "US-East-1-Multi-Client-EKS"
+    Environment        = var.environment
+    ManagedBy         = "Terraform"
+    CriticalInfra     = "true"
+    Layer             = "Foundation"
+    Client            = "mtn-ghana-prod"
+    DeploymentPhase   = "Phase-1"
   }
+  
+  depends_on = [module.vpc_foundation]
 }
 
-resource "aws_ssm_parameter" "region" {
-  name  = "/terraform/${var.environment}/foundation/region"
-  type  = "String"
-  value = var.aws_region
-
-  tags = {
-    Environment = var.environment
-    Layer      = "foundation"
-    ManagedBy  = "terraform"
+# 🔗 DUAL SITE-TO-SITE VPN - Multiple Secure On-Premises Connections
+module "vpn_connections" {
+  for_each = var.enable_vpn ? var.vpn_connections : {}
+  source = "../../../../../modules/site-to-site-vpn"
+  
+  enabled               = each.value.enabled
+  project_name         = "${var.project_name}-${each.key}"
+  region               = var.region
+  vpc_id               = module.vpc_foundation.vpc_id
+  customer_gateway_ip  = each.value.customer_gateway_ip
+  
+  bgp_asn              = each.value.bgp_asn
+  amazon_side_asn      = each.value.amazon_side_asn
+  static_routes_only   = each.value.static_routes_only
+  onprem_cidr_blocks   = [each.value.local_network_cidr]
+  
+  # Tunnel configuration
+  tunnel1_inside_cidr   = each.value.tunnel1_inside_cidr
+  tunnel1_preshared_key = null  # AWS auto-generates
+  tunnel2_inside_cidr   = each.value.tunnel2_inside_cidr
+  tunnel2_preshared_key = null  # AWS auto-generates
+  
+  # Route propagation
+  platform_route_table_ids = module.vpc_foundation.platform_route_table_ids
+  client_route_table_ids = concat(
+    module.client_subnets_ezra_fintech_prod.route_table_ids,
+    module.client_subnets_mtn_ghana_prod.route_table_ids
+  )
+  
+  enable_vpn_logging      = true
+  vpn_log_retention_days = 30
+  sns_topic_arn          = var.sns_topic_arn
+  
+  common_tags = {
+    Project            = "US-East-1-Multi-Client-EKS"
+    Environment        = var.environment
+    ManagedBy         = "Terraform"
+    CriticalInfra     = "true"
+    Layer             = "Foundation"
+    DeploymentPhase   = "Phase-1"
+    VPNConnection     = each.key
+    VPNDescription    = each.value.description
   }
+  
+  depends_on = [module.vpc_foundation]
 }
 
-resource "aws_ssm_parameter" "availability_zones" {
-  name  = "/terraform/${var.environment}/foundation/availability_zones"
-  type  = "StringList"
-  value = join(",", var.availability_zones)
-
-  tags = {
-    Environment = var.environment
-    Layer      = "foundation"
-    ManagedBy  = "terraform"
-  }
+# 🔄 LOCALS for computed values
+locals {
+  # Use first 2 AZs for high availability
+  availability_zones = slice(data.aws_availability_zones.available.names, 0, 2)
 }
-

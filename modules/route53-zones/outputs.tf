@@ -17,3 +17,8 @@ output "zone_arns_list" {
   description = "List of all hosted zone ARNs (for ExternalDNS IRSA)"
   value       = [for zone in aws_route53_zone.zones : zone.arn]
 }
+
+output "zone_ids_list" {
+  description = "List of all hosted zone IDs (for ExternalDNS zone filtering)"
+  value       = [for zone in aws_route53_zone.zones : zone.zone_id]
+}

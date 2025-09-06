@@ -1,4 +1,4 @@
-# 📝 Variables for Site-to-Site VPN Module
+# Variables for Site-to-Site VPN Module
 
 variable "enabled" {
   description = "Whether to create VPN infrastructure"

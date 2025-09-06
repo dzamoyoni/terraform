@@ -121,6 +121,8 @@ resource "kubernetes_deployment" "external_dns" {
           ], 
           # Add domain-filter for each domain
           [for domain in var.domain_filters : "--domain-filter=${domain}"],
+          # Add zone-id-filter for each zone ID if provided
+          length(var.zone_id_filters) > 0 ? [for zone_id in var.zone_id_filters : "--zone-id-filter=${zone_id}"] : [],
           [
             "--provider=aws",
             "--policy=${var.policy}",

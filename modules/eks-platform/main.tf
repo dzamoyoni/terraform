@@ -1,4 +1,4 @@
-# 🏗️ EKS Platform Wrapper Module
+# EKS Platform Wrapper Module
 # Wraps terraform-aws-modules/eks/aws with company standards and conventions
 # This ensures consistency across all EKS deployments in all regions/environments
 
@@ -7,12 +7,12 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0"
+      version = ">= 5.0, < 7.0"
     }
   }
 }
 
-# 🔍 LOCALS - CPTWN Standards
+#  LOCALS - CPTWN Standards
 locals {
   # CPTWN standard tags applied to all resources
   cptwn_tags = {
@@ -25,7 +25,7 @@ locals {
     Region            = var.region
     Layer             = "Platform"
     DeploymentPhase   = "Phase-2"
-    Company           = "CPTWN"
+    Company           = "EZRA-CPTW"
     Architecture      = "Multi-Client"
   }
   
@@ -56,7 +56,7 @@ locals {
       Environment  = var.environment
       Project      = var.project_name
       ManagedBy    = "Terraform"
-      Company      = "CPTWN"
+      Company      = "EZRA-CPTW"
       Architecture = "Multi-Client"
     }
   }
@@ -65,7 +65,7 @@ locals {
 # ☸️ EKS CLUSTER - Official Module with CPTWN Standards
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.24.0"  # Pinned version for consistency
+  version = "20.37.2"  # Latest v20.x version to fix inline_policy deprecation while maintaining API compatibility
   
   # CPTWN standard cluster configuration
   cluster_name    = local.cluster_name
@@ -140,5 +140,5 @@ module "eks" {
   tags = merge(local.cptwn_tags, var.additional_tags)
 }
 
-# 📊 DATA SOURCE - Current AWS account for access patterns
+# DATA SOURCE - Current AWS account for access patterns
 data "aws_caller_identity" "current" {}
