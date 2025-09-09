@@ -16,16 +16,17 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: gp3
+          storageClassName: gp2
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
               storage: ${storage_size}
 
     # Remote write configuration to central Grafana
+    %{ if remote_write_url != "" && remote_write_url != "disabled" }
     remoteWrite:
-    %{ if remote_write_url != "" }
     - url: ${remote_write_url}
+      %{ if remote_write_username != "" && remote_write_password != "" && remote_write_password != "disabled" }
       basicAuth:
         username:
           name: prometheus-remote-write-auth
@@ -33,6 +34,7 @@ prometheus:
         password:
           name: prometheus-remote-write-auth
           key: password
+      %{ endif }
       writeRelabelConfigs:
       - sourceLabels: [__name__]
         regex: 'istio_.*|up|prometheus_.*'

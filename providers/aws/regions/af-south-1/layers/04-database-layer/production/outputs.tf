@@ -9,20 +9,20 @@
 output "mtn_ghana_database_info" {
   description = "MTN Ghana PostgreSQL database connection information"
   value = {
-    client_name    = module.mtn_ghana_postgres.client_name
-    database_name  = module.mtn_ghana_postgres.database_name
-    database_port  = module.mtn_ghana_postgres.database_port
+    client_name   = module.mtn_ghana_postgres.client_name
+    database_name = module.mtn_ghana_postgres.database_name
+    database_port = module.mtn_ghana_postgres.database_port
     master_endpoint = {
-      instance_id  = module.mtn_ghana_postgres.master_instance_id
-      private_ip   = module.mtn_ghana_postgres.master_private_ip
-      dns_name     = module.mtn_ghana_postgres.master_dns_name
-      endpoint     = module.mtn_ghana_postgres.master_endpoint
+      instance_id = module.mtn_ghana_postgres.master_instance_id
+      private_ip  = module.mtn_ghana_postgres.master_private_ip
+      dns_name    = module.mtn_ghana_postgres.master_dns_name
+      endpoint    = module.mtn_ghana_postgres.master_endpoint
     }
     replica_endpoint = module.mtn_ghana_postgres.high_availability_enabled ? {
-      instance_id  = module.mtn_ghana_postgres.replica_instance_id
-      private_ip   = module.mtn_ghana_postgres.replica_private_ip
-      dns_name     = module.mtn_ghana_postgres.replica_dns_name
-      endpoint     = module.mtn_ghana_postgres.replica_endpoint
+      instance_id = module.mtn_ghana_postgres.replica_instance_id
+      private_ip  = module.mtn_ghana_postgres.replica_private_ip
+      dns_name    = module.mtn_ghana_postgres.replica_dns_name
+      endpoint    = module.mtn_ghana_postgres.replica_endpoint
     } : null
     security_group_id = module.mtn_ghana_postgres.security_group_id
     high_availability = module.mtn_ghana_postgres.high_availability_enabled
@@ -52,20 +52,20 @@ output "mtn_ghana_storage_info" {
 output "ezra_database_info" {
   description = "Ezra PostgreSQL database connection information"
   value = {
-    client_name    = module.ezra_postgres.client_name
-    database_name  = module.ezra_postgres.database_name
-    database_port  = module.ezra_postgres.database_port
+    client_name   = module.ezra_postgres.client_name
+    database_name = module.ezra_postgres.database_name
+    database_port = module.ezra_postgres.database_port
     master_endpoint = {
-      instance_id  = module.ezra_postgres.master_instance_id
-      private_ip   = module.ezra_postgres.master_private_ip
-      dns_name     = module.ezra_postgres.master_dns_name
-      endpoint     = module.ezra_postgres.master_endpoint
+      instance_id = module.ezra_postgres.master_instance_id
+      private_ip  = module.ezra_postgres.master_private_ip
+      dns_name    = module.ezra_postgres.master_dns_name
+      endpoint    = module.ezra_postgres.master_endpoint
     }
     replica_endpoint = module.ezra_postgres.high_availability_enabled ? {
-      instance_id  = module.ezra_postgres.replica_instance_id
-      private_ip   = module.ezra_postgres.replica_private_ip
-      dns_name     = module.ezra_postgres.replica_dns_name
-      endpoint     = module.ezra_postgres.replica_endpoint
+      instance_id = module.ezra_postgres.replica_instance_id
+      private_ip  = module.ezra_postgres.replica_private_ip
+      dns_name    = module.ezra_postgres.replica_dns_name
+      endpoint    = module.ezra_postgres.replica_endpoint
     } : null
     security_group_id = module.ezra_postgres.security_group_id
     high_availability = module.ezra_postgres.high_availability_enabled
@@ -95,21 +95,21 @@ output "ezra_storage_info" {
 output "database_layer_summary" {
   description = "Summary of all databases deployed in this layer"
   value = {
-    layer_name = "04-database-layer"
-    region     = var.aws_region
+    layer_name  = "04-database-layer"
+    region      = var.aws_region
     environment = "production"
     clients = {
       mtn_ghana = {
-        master_ip = module.mtn_ghana_postgres.master_private_ip
-        replica_ip = module.mtn_ghana_postgres.high_availability_enabled ? module.mtn_ghana_postgres.replica_private_ip : null
+        master_ip     = module.mtn_ghana_postgres.master_private_ip
+        replica_ip    = module.mtn_ghana_postgres.high_availability_enabled ? module.mtn_ghana_postgres.replica_private_ip : null
         database_name = module.mtn_ghana_postgres.database_name
-        port = module.mtn_ghana_postgres.database_port
+        port          = module.mtn_ghana_postgres.database_port
       }
       ezra = {
-        master_ip = module.ezra_postgres.master_private_ip
-        replica_ip = module.ezra_postgres.high_availability_enabled ? module.ezra_postgres.replica_private_ip : null
+        master_ip     = module.ezra_postgres.master_private_ip
+        replica_ip    = module.ezra_postgres.high_availability_enabled ? module.ezra_postgres.replica_private_ip : null
         database_name = module.ezra_postgres.database_name
-        port = module.ezra_postgres.database_port
+        port          = module.ezra_postgres.database_port
       }
     }
     total_instances = (
@@ -125,7 +125,7 @@ output "database_layer_summary" {
 
 output "database_credentials_notice" {
   description = "Important notice about database credentials"
-  value = <<-EOT
+  value       = <<-EOT
     🔐 DATABASE CREDENTIALS SECURITY NOTICE
     
     ⚠️  Database passwords are stored as sensitive variables and are NOT exposed in outputs

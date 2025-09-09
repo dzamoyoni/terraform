@@ -27,13 +27,13 @@ variable "region" {
 variable "logs_retention_days" {
   description = "Number of days to retain logs in S3"
   type        = number
-  default     = 60 # AF-South-1 secondary region gets shorter retention
+  default     = 90 # Increased for production workload
 }
 
 variable "traces_retention_days" {
   description = "Number of days to retain traces in S3"
   type        = number
-  default     = 7 # Standard trace retention
+  default     = 30 # Increased for production debugging needs
 }
 
 # ============================================================================
@@ -43,7 +43,7 @@ variable "traces_retention_days" {
 variable "enable_local_prometheus" {
   description = "Enable local Prometheus instance"
   type        = bool
-  default     = false  # Disabled since Prometheus is already installed
+  default     = true  # ✅ Enabled for Terraform management
 }
 
 variable "prometheus_remote_write_url" {
@@ -62,7 +62,7 @@ variable "prometheus_remote_write_username" {
 variable "prometheus_remote_write_password" {
   description = "Password for Prometheus remote write authentication"
   type        = string
-  default     = ""
+  default     = "disabled"  # Default value to prevent parsing errors
   sensitive   = true
 }
 
@@ -96,4 +96,76 @@ variable "additional_tenant_namespaces" {
   description = "Additional tenant namespaces to monitor"
   type        = list(string)
   default     = []
+}
+
+# ============================================================================
+# Production Enhancement Variables
+# ============================================================================
+
+variable "enable_grafana" {
+  description = "Enable Grafana for local dashboards"
+  type        = bool
+  default     = true
+}
+
+variable "enable_alertmanager" {
+  description = "Enable AlertManager for production alerting"
+  type        = bool
+  default     = true
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL for alert notifications"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "pagerduty_integration_key" {
+  description = "PagerDuty integration key for critical alerts"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "alert_email" {
+  description = "Email address for alert notifications"
+  type        = string
+  default     = "dennis.juma@ezra.world"
+}
+
+variable "enable_enhanced_monitoring" {
+  description = "Enable enhanced monitoring features (ServiceMonitors, PrometheusRules)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_postgres_monitoring" {
+  description = "Enable PostgreSQL monitoring for client databases"
+  type        = bool
+  default     = true
+}
+
+variable "postgres_endpoints" {
+  description = "PostgreSQL endpoints to monitor"
+  type = map(object({
+    host     = string
+    port     = string
+    database = string
+    client   = string
+  }))
+  default = {
+    mtn_ghana = {
+      host     = "172.20.2.33"
+      port     = "5433"
+      database = "mtn_ghana_prod"
+      client   = "mtn-ghana"
+    }
+    ezra = {
+      host     = "172.20.1.153"
+      port     = "5433"
+      database = "ezra_prod"
+      client   = "ezra"
+    }
+  }
 }

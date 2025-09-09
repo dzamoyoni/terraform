@@ -188,7 +188,7 @@ output "key_name" {
 # ===================================================================================
 # COMPATIBILITY OUTPUTS
 # ===================================================================================
-# These outputs provide compatibility with existing client-infrastructure usage
+# These outputs provide compatibility with legacy usage patterns
 
 output "database_instance_id" {
   description = "Compatibility alias for instance_id (for database use cases)"

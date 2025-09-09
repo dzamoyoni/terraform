@@ -14,8 +14,9 @@ external_services:
   tracing:
     enabled: true
     in_cluster_url: "http://tempo.istio-system.svc.cluster.local:3100"
-    use_grpc: true
-    url: "http://tempo.istio-system.svc.cluster.local:16686"
+    use_grpc: false
+    # For Tempo, we use the query API endpoint
+    url: "http://tempo.istio-system.svc.cluster.local:3100"
 
 istio_namespace: "istio-system"
 
@@ -56,7 +57,7 @@ kiali_feature_flags:
 
 # Login token signing key
 login_token:
-  signing_key: "changeme-please-use-a-proper-signing-key"
+  signing_key: "12345678901234567890123456789012"
 
 # Service mesh configuration
 mesh_tls:

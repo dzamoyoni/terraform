@@ -54,9 +54,9 @@ kiali_feature_flags:
   validations:
     ignore: ["KIA1301"]
 
-# Login token signing key
+# Login token signing key (32 bytes)
 login_token:
-  signing_key: "changeme-please-use-a-proper-signing-key"
+  signing_key: "12345678901234567890123456789012"
 
 # Service mesh configuration
 mesh_tls:

@@ -16,12 +16,10 @@ This directory contains reusable Terraform modules for building scalable, multi-
 - **`route53-zones`** - Route53 hosted zones management
 
 ### **Cluster & Compute**
-- **`eks-cluster`** - EKS cluster with proper configuration
-- **`multi-client-nodegroups`**  **Primary nodegroup module** - Multi-tenant node groups with client isolation
-- **`vpc`** - VPC with public/private subnets
-
-### **Client & Application**
-- **`client-infrastructure`** - Client-specific infrastructure components
+- **`eks-platform`** - EKS cluster wrapper with company standards
+- **`vpc-foundation`** - VPC with public/private subnets and advanced networking
+- **`client-subnets`** - Multi-tenant client subnet isolation
+- **`ec2`** - EC2 instance management with enhanced configurations
 
 ## Module Design Principles
 
@@ -45,31 +43,27 @@ This directory contains reusable Terraform modules for building scalable, multi-
 
 ## Usage Examples
 
-### **Multi-Client Node Groups**
+### **EKS Platform Deployment**
 ```hcl
-module "nodegroups" {
-  source = "../../modules/multi-client-nodegroups"
+module "eks_platform" {
+  source = "../../modules/eks-platform"
   
-  cluster_name     = "us-test-cluster-01"
+  project_name = "your-project"
+  environment  = "production"
+  region       = "us-east-1"
+  
+  cluster_version = "1.30"
   vpc_id          = "vpc-0ec63df5e5566ea0c"
-  private_subnets = ["subnet-xxx", "subnet-yyy"]
-  environment     = "production"
+  platform_subnet_ids = ["subnet-xxx", "subnet-yyy"]
   
-  client_nodegroups = {
-    "client-a" = {
-      capacity_type = "ON_DEMAND"
-      instance_types = ["t3.large", "t3.xlarge"]
-      desired_size = 2
-      max_size = 5
-      min_size = 1
-      tier = "general"
-      workload = "web-applications"
-      performance = "standard"
-      enable_client_isolation = true
-      custom_taints = []
-      extra_labels = {}
-      extra_tags = {}
-      max_unavailable_percentage = 25
+  node_groups = {
+    client_prod = {
+      name_suffix    = "client"
+      instance_types = ["m5.large", "t3.xlarge"]
+      min_size       = 1
+      max_size       = 5
+      desired_size   = 2
+      client         = "client-name"
     }
   }
 }
@@ -110,32 +104,35 @@ module "istio" {
 
 ## Recent Changes
 
-### **Cleanup Completed (August 26, 2025)**
-- **Removed:** Redundant modules: `nodegroups`, `alb`, `ec2`, `environment-base`, `vpn`
-- **Kept:** Only essential modules for current and future infrastructure needs
-- **Result:** Streamlined to 12 focused, production-ready modules
+### **Conservative Cleanup Completed (September 8, 2025)**
+- **Removed:** Legacy modules: `eks-cluster`, `multi-client-nodegroups`, `tenant-subnets`, `client-infrastructure`, `istio-istioctl`
+- **Kept:** All platform service modules for operational flexibility
+- **Result:** Streamlined to 18 focused, production-ready modules
 - **Reasoning:** 
-  - `alb` functionality covered by `aws-load-balancer-controller`
-  - `ec2` not needed for containerized workloads
-  - `environment-base` replaced by layered architecture
-  - `vpn` not currently used (can be re-added if needed)
+  - `eks-cluster` superseded by `eks-platform` wrapper
+  - `multi-client-nodegroups` not referenced in current layers
+  - `tenant-subnets` superseded by `client-subnets`
+  - `client-infrastructure` not used in active deployments
+  - `istio-istioctl` no current usage found
 
 ## Module Status
-
-| Module | Status | Use Case |
+|| Module | Status | Use Case |
 |--------|---------|----------|
-| `multi-client-nodegroups` | ✅ Production | Primary nodegroup module for all client workloads |
-| `eks-cluster` | ✅ Production | EKS cluster management |
+| `eks-platform` | ✅ Production | EKS cluster wrapper with company standards |
+| `vpc-foundation` | ✅ Production | Network foundation with advanced features |
+| `client-subnets` | ✅ Production | Multi-tenant client subnet isolation |
 | `aws-load-balancer-controller*` | ✅ Production | ALB/NLB integration |
 | `external-dns*` | ✅ Production | DNS automation |
-| `istio` | 🚀 **New** | Istio service mesh with ambient mode |
+| `observability-layer` | ✅ Production | Comprehensive monitoring stack |
+| `postgres-ec2` | ✅ Production | PostgreSQL on EC2 with HA |
 | `route53-zones` | ✅ Production | DNS zone management |
+| `ec2` | ✅ Production | Enhanced EC2 instance management |
 | `vpc` | ✅ Production | Network foundation |
 
 **Note:** Modules marked with `*` include both the service and IRSA components.
 
 ---
 
-**Last Updated:** January 21, 2025  
-**Total Modules:** 13 production-ready modules (+ Istio service mesh)  
-**Architecture:** Layered, multi-tenant, secure
+**Last Updated:** September 8, 2025  
+**Total Modules:** 18 production-ready modules  
+**Architecture:** Layered, multi-tenant, secure, multi-cloud ready

@@ -191,40 +191,43 @@ module "observability" {
     }
   }
 
-  # Grafana Tempo Configuration
-  enable_tempo = false  # Temporarily disabled due to ServiceMonitor CRD issue
+  # Grafana Tempo Configuration - ENABLED
+  enable_tempo = true   # ✅ Enabled for distributed tracing with S3 backend
   tempo_resources = {
     requests = {
       cpu    = "500m"
       memory = "1Gi"
     }
     limits = {
-      cpu    = "1000m"
-      memory = "2Gi"
+      cpu    = "1500m"  # Increased for better performance
+      memory = "3Gi"    # Increased for trace processing
     }
   }
 
-  # Prometheus Configuration with Remote Write
-  enable_prometheus                = var.enable_local_prometheus
+  # Prometheus Configuration - TERRAFORM MANAGED
+  enable_prometheus                = true  # ✅ Enabled with fixed remote write configuration
   prometheus_remote_write_url      = var.prometheus_remote_write_url
   prometheus_remote_write_username = var.prometheus_remote_write_username
   prometheus_remote_write_password = var.prometheus_remote_write_password
-  prometheus_storage_size          = "15Gi" # AF-South-1 gets slightly smaller storage
+  prometheus_storage_size          = "30Gi"  # Increased for production workload
   prometheus_resources = {
     requests = {
-      cpu    = "500m"
-      memory = "1Gi"
+      cpu    = "1000m"  # Doubled for production
+      memory = "2Gi"    # Doubled for production
     }
     limits = {
-      cpu    = "1000m"
-      memory = "2Gi"
+      cpu    = "2000m"  # Doubled for production
+      memory = "4Gi"    # Doubled for production
     }
   }
 
-  # Kiali Configuration
-  enable_kiali            = false  # Disabled since Kiali already exists
-  kiali_auth_strategy     = var.kiali_auth_strategy
-  external_prometheus_url = var.external_prometheus_url
+  # Kiali Configuration - TERRAFORM MANAGED  
+  enable_kiali         = true   # ✅ Terraform-managed Kiali
+  kiali_auth_strategy  = "token" # Enhanced security vs anonymous
+  external_prometheus_url = ""   # Will use Terraform-managed Prometheus
+  
+  # Cross-region replication (supported variable)
+  enable_cross_region_replication = var.enable_cross_region_replication
 
   depends_on = [
     data.aws_ssm_parameter.cluster_name,

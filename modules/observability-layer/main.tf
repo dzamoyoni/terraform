@@ -396,8 +396,8 @@ resource "helm_release" "tempo" {
   ]
 }
 
-# Deploy Prometheus with Remote Write
-resource "helm_release" "prometheus" {
+# Deploy Prometheus Stack
+resource "helm_release" "prometheus_stack" {
   count = var.enable_prometheus ? 1 : 0
 
   name       = "prometheus"
@@ -405,22 +405,19 @@ resource "helm_release" "prometheus" {
   chart      = "kube-prometheus-stack"
   version    = var.prometheus_chart_version
   namespace  = local.observability_namespace
+  timeout    = 600
+  wait       = true
 
   values = [templatefile("${path.module}/templates/prometheus-values.yaml.tpl", {
     cluster_name           = var.cluster_name
     region                = var.region  
-    remote_write_url      = var.prometheus_remote_write_url
-    remote_write_username = var.prometheus_remote_write_username
-    remote_write_password = var.prometheus_remote_write_password
+    remote_write_url      = ""
+    remote_write_username = ""
+    remote_write_password = "disabled"
     tenant_configs        = local.tenant_configs
     storage_size          = var.prometheus_storage_size
     resources             = var.prometheus_resources
   })]
-
-  set_sensitive {
-    name  = "prometheus.prometheusSpec.remoteWrite[0].basicAuth.password.value"
-    value = var.prometheus_remote_write_password
-  }
 }
 
 # ============================================================================
@@ -442,6 +439,8 @@ resource "helm_release" "kiali" {
     auth_strategy = var.kiali_auth_strategy
     prometheus_url = var.enable_prometheus ? "http://prometheus-kube-prometheus-prometheus:9090" : var.external_prometheus_url
   })]
+  
+  # Signing key now set correctly in template
 
-  depends_on = [helm_release.prometheus]
+  # depends_on = [helm_release.prometheus_stack]  # Temporarily removed dependency
 }

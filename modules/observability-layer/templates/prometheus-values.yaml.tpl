@@ -24,7 +24,7 @@ prometheus:
 
     # Remote write configuration to central Grafana
     remoteWrite:
-    %{ if remote_write_url != "" }
+    %{ if remote_write_url != "" && remote_write_password != "disabled" }
     - url: ${remote_write_url}
       basicAuth:
         username:

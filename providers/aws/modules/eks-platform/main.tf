@@ -142,3 +142,15 @@ module "eks" {
 
 # DATA SOURCE - Current AWS account for access patterns
 data "aws_caller_identity" "current" {}
+
+# ============================================================================
+# EBS CSI Driver IAM Policy Attachment
+# ============================================================================
+# Attach the EBS CSI driver policy to all node groups to enable persistent volumes
+
+resource "aws_iam_role_policy_attachment" "node_group_ebs_csi_policy" {
+  for_each = var.node_groups
+  
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = module.eks.eks_managed_node_groups[each.key].iam_role_name
+}

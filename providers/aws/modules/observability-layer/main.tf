@@ -416,11 +416,6 @@ resource "helm_release" "prometheus" {
     storage_size          = var.prometheus_storage_size
     resources             = var.prometheus_resources
   })]
-
-  set_sensitive {
-    name  = "prometheus.prometheusSpec.remoteWrite[0].basicAuth.password.value"
-    value = var.prometheus_remote_write_password
-  }
 }
 
 # ============================================================================

@@ -277,9 +277,9 @@ variable "tags" {
 # calling configuration rather than in this module.
 
 # ===================================================================================
-# COMPATIBILITY WITH CLIENT-INFRASTRUCTURE MODULE
+# COMPATIBILITY VARIABLES
 # ===================================================================================
-# These variables provide compatibility with the existing client-infrastructure module
+# These variables provide compatibility with legacy usage patterns
 
 variable "enable_ssm_compat" {
   description = "Compatibility alias for enable_ssm"
