@@ -32,27 +32,27 @@ variable "terraform_state_region" {
 variable "key_name" {
   description = "AWS key pair name for EC2 instances"
   type        = string
-  default     = "terraform-key"  # Consistent key name across regions
+  default     = "terraform-key" # Consistent key name across regions
 }
 
 # Client-specific configurations
 variable "mtn_ghana_config" {
   description = "MTN Ghana database configuration"
   type = object({
-    instance_type    = string
-    volume_size      = number
-    volume_type      = string
-    volume_iops      = number
-    backup_schedule  = string
+    instance_type      = string
+    volume_size        = number
+    volume_type        = string
+    volume_iops        = number
+    backup_schedule    = string
     maintenance_window = string
   })
   default = {
-    instance_type    = "r5.large"
-    volume_size      = 30
-    volume_type      = "io2"
-    volume_iops      = 10000
-    backup_schedule  = "continuous"
-    maintenance_window = "sun:01:00-sun:02:00"  # UTC
+    instance_type      = "r5.large"
+    volume_size        = 30
+    volume_type        = "io2"
+    volume_iops        = 10000
+    backup_schedule    = "continuous"
+    maintenance_window = "sun:01:00-sun:02:00" # UTC
   }
 }
 
@@ -80,7 +80,7 @@ variable "mtn_ghana_config" {
 variable "enable_encryption" {
   description = "Enable encryption for EBS volumes"
   type        = bool
-  default     = false  # Disabled for initial setup simplicity
+  default     = false # Disabled for initial setup simplicity
 }
 
 variable "enable_monitoring" {
@@ -107,26 +107,26 @@ variable "mtn_ghana_db_password" {
   description = "MTN Ghana database password"
   type        = string
   sensitive   = true
-  default     = "changeme123!"  # Default for development, should be overridden
+  default     = "changeme123!" # Default for development, should be overridden
 }
 
 variable "mtn_ghana_repl_password" {
   description = "MTN Ghana database replication password"
   type        = string
   sensitive   = true
-  default     = "repl_changeme123!"  # Default for development, should be overridden
+  default     = "repl_changeme123!" # Default for development, should be overridden
 }
 
 variable "orange_madagascar_db_password" {
   description = "Orange Madagascar database password"
   type        = string
   sensitive   = true
-  default     = "orange_changeme123!"  # Default for development, should be overridden
+  default     = "orange_changeme123!" # Default for development, should be overridden
 }
 
 variable "orange_madagascar_repl_password" {
   description = "Orange Madagascar database replication password"
   type        = string
   sensitive   = true
-  default     = "orange_repl_changeme123!"  # Default for development, should be overridden
+  default     = "orange_repl_changeme123!" # Default for development, should be overridden
 }

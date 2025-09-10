@@ -99,13 +99,13 @@ output "vpn_connections" {
   description = "Details of all VPN connections"
   value = var.enable_vpn ? {
     for k, v in module.vpn_connections : k => {
-      vpn_connection_id = v.vpn_connection_id
-      vpn_gateway_id   = v.vpn_gateway_id
-      tunnel1_address  = v.tunnel1_address
-      tunnel2_address  = v.tunnel2_address
+      vpn_connection_id   = v.vpn_connection_id
+      vpn_gateway_id      = v.vpn_gateway_id
+      tunnel1_address     = v.tunnel1_address
+      tunnel2_address     = v.tunnel2_address
       customer_gateway_ip = var.vpn_connections[k].customer_gateway_ip
-      local_network   = var.vpn_connections[k].local_network_cidr
-      description     = var.vpn_connections[k].description
+      local_network       = var.vpn_connections[k].local_network_cidr
+      description         = var.vpn_connections[k].description
     }
   } : null
 }
@@ -140,37 +140,37 @@ output "vpc_endpoints" {
 output "foundation_summary" {
   description = "Summary of foundation infrastructure deployed"
   value = {
-    vpc_id                = module.vpc_foundation.vpc_id
-    vpc_cidr             = module.vpc_foundation.vpc_cidr_block
-    availability_zones   = local.availability_zones
-    nat_gateways         = length(module.vpc_foundation.nat_gateway_ids)
-    public_subnets       = length(module.vpc_foundation.public_subnet_ids)
-    platform_subnets     = length(module.vpc_foundation.platform_subnet_ids)
-    
+    vpc_id             = module.vpc_foundation.vpc_id
+    vpc_cidr           = module.vpc_foundation.vpc_cidr_block
+    availability_zones = local.availability_zones
+    nat_gateways       = length(module.vpc_foundation.nat_gateway_ids)
+    public_subnets     = length(module.vpc_foundation.public_subnet_ids)
+    platform_subnets   = length(module.vpc_foundation.platform_subnet_ids)
+
     # Client infrastructure counts
     mtn_ghana_prod_total_subnets = (
-      length(module.client_subnets_mtn_ghana_prod.compute_subnet_ids) + 
-      length(module.client_subnets_mtn_ghana_prod.database_subnet_ids) + 
+      length(module.client_subnets_mtn_ghana_prod.compute_subnet_ids) +
+      length(module.client_subnets_mtn_ghana_prod.database_subnet_ids) +
       length(module.client_subnets_mtn_ghana_prod.eks_subnet_ids)
     )
     orange_madagascar_prod_total_subnets = (
-      length(module.client_subnets_orange_madagascar_prod.compute_subnet_ids) + 
-      length(module.client_subnets_orange_madagascar_prod.database_subnet_ids) + 
+      length(module.client_subnets_orange_madagascar_prod.compute_subnet_ids) +
+      length(module.client_subnets_orange_madagascar_prod.database_subnet_ids) +
       length(module.client_subnets_orange_madagascar_prod.eks_subnet_ids)
     )
-    
+
     # Security & Monitoring
     vpc_flow_logs_enabled = true
     vpc_endpoints_enabled = true
-    vpn_enabled          = var.enable_vpn
-    deletion_protected   = true
+    vpn_enabled           = var.enable_vpn
+    deletion_protected    = true
   }
 }
 
 #  SECURITY NOTICE
 output "security_notice" {
   description = "Critical security and next steps information"
-  value = <<-EOT
+  value       = <<-EOT
     🔒 PHASE 1 FOUNDATION INFRASTRUCTURE DEPLOYED
     
     ✅ SUCCESSFULLY CREATED:

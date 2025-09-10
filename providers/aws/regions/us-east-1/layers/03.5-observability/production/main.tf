@@ -26,7 +26,7 @@ terraform {
       version = "~> 2.11"
     }
   }
-  
+
   backend "s3" {
     # Backend configuration loaded from file
   }
@@ -38,18 +38,18 @@ terraform {
 
 provider "aws" {
   region = var.region
-  
+
   default_tags {
     tags = {
-      Project            = "US-East-1-Multi-Client-EKS"
-      Environment        = var.environment
-      ManagedBy         = "Terraform"
-      CriticalInfra     = "true"
-      BackupRequired    = "true"
-      SecurityLevel     = "High"
-      Region            = var.region
-      Layer             = "Observability"
-      DeploymentPhase   = "Phase-3.5"
+      Project         = "US-East-1-Multi-Client-EKS"
+      Environment     = var.environment
+      ManagedBy       = "Terraform"
+      CriticalInfra   = "true"
+      BackupRequired  = "true"
+      SecurityLevel   = "High"
+      Region          = var.region
+      Layer           = "Observability"
+      DeploymentPhase = "Phase-3.5"
     }
   }
 }
@@ -104,13 +104,13 @@ provider "helm" {
 locals {
   # Common tags for all resources
   common_tags = {
-    Project            = "US-East-1-Multi-Client-EKS"
-    Environment        = var.environment
-    ManagedBy         = "Terraform"
-    CriticalInfra     = "true"
-    Layer             = "Observability"
-    DeploymentPhase   = "Phase-3.5"
-    Region            = var.region
+    Project         = "US-East-1-Multi-Client-EKS"
+    Environment     = var.environment
+    ManagedBy       = "Terraform"
+    CriticalInfra   = "true"
+    Layer           = "Observability"
+    DeploymentPhase = "Phase-3.5"
+    Region          = var.region
   }
 
   # Common labels for Kubernetes resources
@@ -161,9 +161,9 @@ module "observability" {
   source = "../../../../../modules/observability-layer"
 
   # Core Configuration
-  project_name             = var.project_name
-  environment              = var.environment
-  region                   = var.region
+  project_name            = var.project_name
+  environment             = var.environment
+  region                  = var.region
   cluster_name            = data.aws_ssm_parameter.cluster_name.value
   cluster_oidc_issuer_arn = data.aws_ssm_parameter.cluster_oidc_issuer_arn.value
 
@@ -209,7 +209,7 @@ module "observability" {
   prometheus_remote_write_url      = var.prometheus_remote_write_url
   prometheus_remote_write_username = var.prometheus_remote_write_username
   prometheus_remote_write_password = var.prometheus_remote_write_password
-  prometheus_storage_size          = "20Gi"  # US-East-1 gets larger storage
+  prometheus_storage_size          = "20Gi" # US-East-1 gets larger storage
   prometheus_resources = {
     requests = {
       cpu    = "1000m"
@@ -222,8 +222,8 @@ module "observability" {
   }
 
   # Kiali Configuration
-  enable_kiali         = true
-  kiali_auth_strategy  = var.kiali_auth_strategy
+  enable_kiali            = true
+  kiali_auth_strategy     = var.kiali_auth_strategy
   external_prometheus_url = var.external_prometheus_url
 
   depends_on = [

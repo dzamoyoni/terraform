@@ -70,25 +70,25 @@ output "integration_info" {
     # For Istio configuration
     tempo_endpoint      = module.observability.tempo_endpoint
     prometheus_endpoint = module.observability.prometheus_endpoint
-    
+
     # For application instrumentation
     trace_ingestion_endpoints = {
-      otlp_grpc        = "http://tempo.istio-system.svc.cluster.local:4317"
-      otlp_http        = "http://tempo.istio-system.svc.cluster.local:4318"
-      jaeger_grpc      = "http://tempo.istio-system.svc.cluster.local:14250"
-      jaeger_thrift    = "http://tempo.istio-system.svc.cluster.local:14268"
+      otlp_grpc     = "http://tempo.istio-system.svc.cluster.local:4317"
+      otlp_http     = "http://tempo.istio-system.svc.cluster.local:4318"
+      jaeger_grpc   = "http://tempo.istio-system.svc.cluster.local:14250"
+      jaeger_thrift = "http://tempo.istio-system.svc.cluster.local:14268"
     }
-    
+
     # For metrics collection
     prometheus_scrape_configs = {
-      istio_proxy = "istio-proxy"
+      istio_proxy  = "istio-proxy"
       applications = "http-metrics"
     }
-    
+
     # S3 bucket information for external access
     logs_bucket_name   = module.observability.logs_s3_bucket.bucket
     traces_bucket_name = module.observability.traces_s3_bucket.bucket
-    
+
     # Regional information
     region       = var.region
     cluster_name = local.cluster_name

@@ -76,17 +76,17 @@ output "security_notice" {
 # 🔧 SSM PARAMETER NAMES - For downstream layer consumption
 output "ssm_parameter_names" {
   description = "Names of SSM parameters containing cluster information"
-  value       = {
+  value = {
     # Required by observability layer (using consistent path)
-    cluster_name                        = aws_ssm_parameter.cluster_name.name
-    cluster_endpoint                    = aws_ssm_parameter.cluster_endpoint.name
+    cluster_name                       = aws_ssm_parameter.cluster_name.name
+    cluster_endpoint                   = aws_ssm_parameter.cluster_endpoint.name
     cluster_certificate_authority_data = aws_ssm_parameter.cluster_certificate_authority_data.name
     cluster_oidc_issuer_arn            = aws_ssm_parameter.cluster_oidc_issuer_arn.name
-    
+
     # Additional parameters for other downstream layers
-    cluster_arn                         = aws_ssm_parameter.cluster_arn.name
-    cluster_security_group_id           = aws_ssm_parameter.cluster_security_group_id.name
-    node_security_group_id              = aws_ssm_parameter.node_security_group_id.name
-    cluster_version                     = aws_ssm_parameter.cluster_version.name
+    cluster_arn               = aws_ssm_parameter.cluster_arn.name
+    cluster_security_group_id = aws_ssm_parameter.cluster_security_group_id.name
+    node_security_group_id    = aws_ssm_parameter.node_security_group_id.name
+    cluster_version           = aws_ssm_parameter.cluster_version.name
   }
 }

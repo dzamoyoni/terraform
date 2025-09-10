@@ -62,26 +62,26 @@ output "shared_services_summary" {
     cluster_name = data.terraform_remote_state.platform.outputs.cluster_name
     region       = var.region
     environment  = var.environment
-    
+
     services_deployed = {
       cluster_autoscaler           = var.enable_cluster_autoscaler
       aws_load_balancer_controller = var.enable_aws_load_balancer_controller
-      metrics_server              = var.enable_metrics_server
-      external_dns                = var.enable_external_dns
+      metrics_server               = var.enable_metrics_server
+      external_dns                 = var.enable_external_dns
     }
-    
+
     service_versions = {
       cluster_autoscaler_version           = var.cluster_autoscaler_version
       aws_load_balancer_controller_version = var.aws_load_balancer_controller_version
       metrics_server_version               = var.metrics_server_version
     }
-    
+
     cptwn_standards = {
-      tagging_standards    = "applied"
-      security_hardening   = "applied" 
-      monitoring_enabled   = "applied"
-      backup_configured    = "applied"
-      naming_convention    = "applied"
+      tagging_standards  = "applied"
+      security_hardening = "applied"
+      monitoring_enabled = "applied"
+      backup_configured  = "applied"
+      naming_convention  = "applied"
     }
   }
 }

@@ -18,7 +18,7 @@ terraform {
       version = "~> 2.11"
     }
   }
-  
+
   backend "s3" {
     # Backend configuration loaded from file
   }
@@ -26,18 +26,18 @@ terraform {
 
 provider "aws" {
   region = var.region
-  
+
   default_tags {
     tags = {
-      Project            = "CPTWN-Multi-Client-EKS"
-      Environment        = var.environment
-      ManagedBy         = "Terraform"
-      CriticalInfra     = "true"
-      BackupRequired    = "true"
-      SecurityLevel     = "High"
-      Region            = var.region
-      Layer             = "Platform"
-      DeploymentPhase   = "Phase-2"
+      Project         = "CPTWN-Multi-Client-EKS"
+      Environment     = var.environment
+      ManagedBy       = "Terraform"
+      CriticalInfra   = "true"
+      BackupRequired  = "true"
+      SecurityLevel   = "High"
+      Region          = var.region
+      Layer           = "Platform"
+      DeploymentPhase = "Phase-2"
     }
   }
 }
@@ -59,32 +59,32 @@ locals {
   platform_subnet_ids = data.terraform_remote_state.foundation.outputs.platform_subnet_ids
   vpc_cidr_block      = data.terraform_remote_state.foundation.outputs.vpc_cidr_block
   availability_zones  = data.terraform_remote_state.foundation.outputs.availability_zones
-  
+
   # Platform configuration - shortened to avoid IAM role name length limits
-  cluster_name = "${var.project_name}"
+  cluster_name = var.project_name
 }
 
 # ☸️ EKS PLATFORM - Using Multi-Region Wrapper Module
 module "eks_platform" {
   source = "../../../../../modules/eks-platform"
-  
+
   # Core CPTWN configuration
   project_name = var.project_name
   environment  = var.environment
   region       = var.region
-  
+
   # Cluster configuration
   cluster_version = var.cluster_version
-  
+
   # Network configuration from foundation layer
   vpc_id              = local.vpc_id
   platform_subnet_ids = local.platform_subnet_ids
-  
+
   # Security configuration
-  enable_public_access    = true
-  management_cidr_blocks  = var.management_cidr_blocks
-  log_retention_days      = 30
-  
+  enable_public_access   = true
+  management_cidr_blocks = var.management_cidr_blocks
+  log_retention_days     = 30
+
   # Multi-client node groups
   node_groups = {
     # MTN Ghana Client Node Group
@@ -95,17 +95,17 @@ module "eks_platform" {
       max_size       = 5
       desired_size   = 2
       disk_size      = 30
-      
+
       # Client-specific configuration
       client  = "mtn-ghana-prod"
       purpose = "MTN Ghana Client Node Group"
-      
+
       # Additional labels for this client
       labels = {
         NodeGroup = "client"
       }
     }
-    
+
     # Orange Madagascar Client Node Group (Disabled - will be enabled later)
     # orange_madagascar_prod = {
     #   name_suffix    = "omm"
@@ -125,13 +125,13 @@ module "eks_platform" {
     #   }
     # }
   }
-  
+
   # Access configuration
   access_entries = {
     admin = {
       kubernetes_groups = []
       principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-      
+
       policy_associations = {
         admin = {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -142,7 +142,7 @@ module "eks_platform" {
       }
     }
   }
-  
+
   # Additional project-specific tags
   additional_tags = {
     Project = "CPTWN-Multi-Client-EKS"

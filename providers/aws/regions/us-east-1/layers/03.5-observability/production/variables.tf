@@ -27,13 +27,13 @@ variable "region" {
 variable "logs_retention_days" {
   description = "Number of days to retain logs in S3"
   type        = number
-  default     = 90  # US-East-1 primary region gets longer retention
+  default     = 90 # US-East-1 primary region gets longer retention
 }
 
 variable "traces_retention_days" {
   description = "Number of days to retain traces in S3"
   type        = number
-  default     = 14  # Extended trace retention for primary region
+  default     = 14 # Extended trace retention for primary region
 }
 
 # ============================================================================
@@ -49,7 +49,7 @@ variable "enable_local_prometheus" {
 variable "prometheus_remote_write_url" {
   description = "Remote write URL for your central on-premises Grafana"
   type        = string
-  default     = ""  # Set this to your central Grafana URL
+  default     = "" # Set this to your central Grafana URL
 }
 
 variable "prometheus_remote_write_username" {

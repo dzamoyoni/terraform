@@ -63,19 +63,19 @@ output "database_layer_summary" {
     environment = var.environment
     region      = var.region
     cluster     = local.cluster_name
-    
+
     mtn_ghana_prod = {
-      instance_id       = aws_instance.mtn_ghana_db_prod.id
-      private_ip        = aws_instance.mtn_ghana_db_prod.private_ip
-      private_dns       = aws_instance.mtn_ghana_db_prod.private_dns
-      data_volume_id    = aws_ebs_volume.mtn_ghana_extra_prod.id
+      instance_id    = aws_instance.mtn_ghana_db_prod.id
+      private_ip     = aws_instance.mtn_ghana_db_prod.private_ip
+      private_dns    = aws_instance.mtn_ghana_db_prod.private_dns
+      data_volume_id = aws_ebs_volume.mtn_ghana_extra_prod.id
       # logs_volume_id    = aws_ebs_volume.mtn_ghana_extra2_prod.id  # Commented out for initial deployment
       iam_role          = aws_iam_role.mtn_ghana_role.name
       subnet_id         = local.mtn_ghana_database_subnet_id
       security_group    = local.mtn_ghana_database_security_group
       availability_zone = local.availability_zones[0]
     }
-    
+
     # orange_madagascar_prod resources are commented out in main.tf
     # orange_madagascar_prod = {
     #   instance_id       = aws_instance.orange_madagascar_db.id
@@ -94,7 +94,7 @@ output "database_layer_summary" {
 output "security_notice" {
   description = "CPTWN database security notice and guidance"
   value = {
-    message = "CPTWN Database Layer deployed with security best practices"
+    message       = "CPTWN Database Layer deployed with security best practices"
     documentation = "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security.html"
     actions_required = [
       "Configure database software on EC2 instances via SSM",
@@ -112,7 +112,7 @@ resource "aws_ssm_parameter" "mtn_ghana_database_ip" {
   name  = "/cptwn/${var.environment}/databases/mtn-ghana-prod/private-ip"
   type  = "String"
   value = aws_instance.mtn_ghana_db_prod.private_ip
-  
+
   tags = merge(local.cptwn_tags, {
     Name    = "mtn-ghana-prod-database-ip"
     Purpose = "inter-layer-communication"
@@ -136,7 +136,7 @@ resource "aws_ssm_parameter" "database_instance_ids" {
   name  = "/cptwn/${var.environment}/databases/instance-ids"
   type  = "StringList"
   value = aws_instance.mtn_ghana_db_prod.id
-  
+
   tags = merge(local.cptwn_tags, {
     Name    = "database-instance-ids"
     Purpose = "inter-layer-communication"

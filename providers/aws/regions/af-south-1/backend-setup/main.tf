@@ -14,17 +14,17 @@ terraform {
 
 provider "aws" {
   region = "af-south-1"
-  
+
   default_tags {
     tags = {
-      Project            = "CPTWN-Multi-Client-EKS"
-      Environment        = "Production"
-      ManagedBy         = "Terraform"
-      CriticalInfra     = "true"
-      BackupRequired    = "true"
-      SecurityLevel     = "High"
-      Region            = "af-south-1"
-      Layer             = "Backend"
+      Project        = "CPTWN-Multi-Client-EKS"
+      Environment    = "Production"
+      ManagedBy      = "Terraform"
+      CriticalInfra  = "true"
+      BackupRequired = "true"
+      SecurityLevel  = "High"
+      Region         = "af-south-1"
+      Layer          = "Backend"
     }
   }
 }
@@ -36,7 +36,7 @@ data "aws_partition" "current" {}
 # 🔐 ULTRA-SECURE S3 BUCKET FOR TERRAFORM STATE
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "cptwn-terraform-state-ezra"
-  
+
   tags = {
     Name              = "CPTWN Terraform State Bucket"
     Purpose           = "Terraform Backend State Storage"
@@ -44,7 +44,7 @@ resource "aws_s3_bucket" "terraform_state" {
     DeletionProtected = "true"
     SecurityLevel     = "Maximum"
   }
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -55,10 +55,10 @@ resource "aws_s3_bucket" "terraform_state" {
 resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
   versioning_configuration {
-    status     = "Enabled"
+    status = "Enabled"
     # mfa_delete = "Enabled"  # Must be set via AWS CLI with MFA
   }
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -74,7 +74,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
     }
     bucket_key_enabled = true
   }
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -88,7 +88,7 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -101,7 +101,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
   rule {
     id     = "terraform_state_lifecycle"
     status = "Enabled"
-    
+
     filter {
       prefix = ""
     }
@@ -111,23 +111,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
       noncurrent_days = 30
       storage_class   = "STANDARD_IA"
     }
-    
+
     noncurrent_version_transition {
       noncurrent_days = 90
       storage_class   = "GLACIER"
     }
-    
+
     # Keep old versions for 1 year for disaster recovery
     noncurrent_version_expiration {
       noncurrent_days = 365
     }
-    
+
     # Clean up incomplete multipart uploads
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
   }
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -141,10 +141,10 @@ resource "aws_s3_bucket_policy" "terraform_state" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "DenyInsecureConnections"
-        Effect = "Deny"
+        Sid       = "DenyInsecureConnections"
+        Effect    = "Deny"
         Principal = "*"
-        Action = "s3:*"
+        Action    = "s3:*"
         Resource = [
           aws_s3_bucket.terraform_state.arn,
           "${aws_s3_bucket.terraform_state.arn}/*"
@@ -178,7 +178,7 @@ resource "aws_s3_bucket_policy" "terraform_state" {
       }
     ]
   })
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -190,7 +190,7 @@ resource "aws_s3_bucket_logging" "terraform_state" {
 
   target_bucket = aws_s3_bucket.access_logs.id
   target_prefix = "terraform-state-access-logs/"
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -199,14 +199,14 @@ resource "aws_s3_bucket_logging" "terraform_state" {
 # Separate bucket for access logs (also protected)
 resource "aws_s3_bucket" "access_logs" {
   bucket = "cptwn-terraform-state-ezra-access-logs"
-  
+
   tags = {
     Name              = "CPTWN Terraform State Access Logs"
     Purpose           = "S3 Access Logging"
     CriticalInfra     = "true"
     DeletionProtected = "true"
   }
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -220,7 +220,7 @@ resource "aws_s3_bucket_public_access_block" "access_logs" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -228,23 +228,23 @@ resource "aws_s3_bucket_public_access_block" "access_logs" {
 
 # 🔐 CRITICAL DYNAMODB TABLE FOR STATE LOCKING
 resource "aws_dynamodb_table" "terraform_locks" {
-  name           = "terraform-locks-af-south"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
-  
+  name         = "terraform-locks-af-south"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
   attribute {
     name = "LockID"
     type = "S"
   }
-  
+
   # Enable point-in-time recovery for critical infrastructure
   point_in_time_recovery {
     enabled = true
   }
-  
+
   # Enable deletion protection
   deletion_protection_enabled = true
-  
+
   tags = {
     Name              = "CPTWN Terraform State Locks"
     Purpose           = "Terraform State Locking"
@@ -252,7 +252,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
     DeletionProtected = "true"
     SecurityLevel     = "High"
   }
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -282,7 +282,7 @@ output "dynamodb_table_arn" {
 # Security Notice
 output "security_notice" {
   description = "Critical security information"
-  value = <<-EOT
+  value       = <<-EOT
     🔒 CRITICAL INFRASTRUCTURE DEPLOYED
     
     ⚠️  This S3 bucket and DynamoDB table are PROTECTED with:

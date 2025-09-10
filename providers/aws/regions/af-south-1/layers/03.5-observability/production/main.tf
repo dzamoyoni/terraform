@@ -192,40 +192,40 @@ module "observability" {
   }
 
   # Grafana Tempo Configuration - ENABLED
-  enable_tempo = true   # ✅ Enabled for distributed tracing with S3 backend
+  enable_tempo = true # ✅ Enabled for distributed tracing with S3 backend
   tempo_resources = {
     requests = {
       cpu    = "500m"
       memory = "1Gi"
     }
     limits = {
-      cpu    = "1500m"  # Increased for better performance
-      memory = "3Gi"    # Increased for trace processing
+      cpu    = "1500m" # Increased for better performance
+      memory = "3Gi"   # Increased for trace processing
     }
   }
 
   # Prometheus Configuration - TERRAFORM MANAGED
-  enable_prometheus                = true  # ✅ Enabled with fixed remote write configuration
+  enable_prometheus                = true # ✅ Enabled with fixed remote write configuration
   prometheus_remote_write_url      = var.prometheus_remote_write_url
   prometheus_remote_write_username = var.prometheus_remote_write_username
   prometheus_remote_write_password = var.prometheus_remote_write_password
-  prometheus_storage_size          = "30Gi"  # Increased for production workload
+  prometheus_storage_size          = "30Gi" # Increased for production workload
   prometheus_resources = {
     requests = {
-      cpu    = "1000m"  # Doubled for production
-      memory = "2Gi"    # Doubled for production
+      cpu    = "1000m" # Doubled for production
+      memory = "2Gi"   # Doubled for production
     }
     limits = {
-      cpu    = "2000m"  # Doubled for production
-      memory = "4Gi"    # Doubled for production
+      cpu    = "2000m" # Doubled for production
+      memory = "4Gi"   # Doubled for production
     }
   }
 
   # Kiali Configuration - TERRAFORM MANAGED  
-  enable_kiali         = true   # ✅ Terraform-managed Kiali
-  kiali_auth_strategy  = "token" # Enhanced security vs anonymous
-  external_prometheus_url = ""   # Will use Terraform-managed Prometheus
-  
+  enable_kiali            = true    # ✅ Terraform-managed Kiali
+  kiali_auth_strategy     = "token" # Enhanced security vs anonymous
+  external_prometheus_url = ""      # Will use Terraform-managed Prometheus
+
   # Cross-region replication (supported variable)
   enable_cross_region_replication = var.enable_cross_region_replication
 

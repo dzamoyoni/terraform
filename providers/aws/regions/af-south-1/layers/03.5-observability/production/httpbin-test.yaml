@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: test-tracing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: httpbin
+        version: v1
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+      - image: docker.io/kennethreitz/httpbin
+        imagePullPolicy: IfNotPresent
+        name: httpbin
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: test-tracing
+  labels:
+    app: httpbin
+spec:
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 80
+  selector:
+    app: httpbin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sleep
+  namespace: test-tracing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sleep
+  template:
+    metadata:
+      labels:
+        app: sleep
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+      - name: sleep
+        image: curlimages/curl
+        command: ["/bin/sleep", "infinity"]
+        imagePullPolicy: IfNotPresent

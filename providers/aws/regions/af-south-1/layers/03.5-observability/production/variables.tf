@@ -43,7 +43,7 @@ variable "traces_retention_days" {
 variable "enable_local_prometheus" {
   description = "Enable local Prometheus instance"
   type        = bool
-  default     = true  # ✅ Enabled for Terraform management
+  default     = true # ✅ Enabled for Terraform management
 }
 
 variable "prometheus_remote_write_url" {
@@ -62,7 +62,7 @@ variable "prometheus_remote_write_username" {
 variable "prometheus_remote_write_password" {
   description = "Password for Prometheus remote write authentication"
   type        = string
-  default     = "disabled"  # Default value to prevent parsing errors
+  default     = "disabled" # Default value to prevent parsing errors
   sensitive   = true
 }
 

@@ -19,7 +19,7 @@ terraform {
       version = "~> 2.11"
     }
   }
-  
+
   backend "s3" {
     # Backend configuration loaded from file
   }
@@ -27,18 +27,18 @@ terraform {
 
 provider "aws" {
   region = var.region
-  
+
   default_tags {
     tags = {
-      Project            = "CPTWN-Multi-Client-EKS"
-      Environment        = var.environment
-      ManagedBy         = "Terraform"
-      CriticalInfra     = "true"
-      BackupRequired    = "true"
-      SecurityLevel     = "High"
-      Region            = var.region
-      Layer             = "SharedServices"
-      DeploymentPhase   = "Phase-2"
+      Project         = "CPTWN-Multi-Client-EKS"
+      Environment     = var.environment
+      ManagedBy       = "Terraform"
+      CriticalInfra   = "true"
+      BackupRequired  = "true"
+      SecurityLevel   = "High"
+      Region          = var.region
+      Layer           = "SharedServices"
+      DeploymentPhase = "Phase-2"
     }
   }
 }
@@ -69,31 +69,31 @@ data "aws_region" "current" {}
 # 🔍 LOCALS - Platform Layer Data and CPTWN Standards
 locals {
   # Platform layer outputs
-  cluster_name               = data.terraform_remote_state.platform.outputs.cluster_name
-  cluster_endpoint          = data.terraform_remote_state.platform.outputs.cluster_endpoint
-  cluster_ca_certificate    = base64decode(data.terraform_remote_state.platform.outputs.cluster_certificate_authority_data)
-  oidc_provider_arn         = data.terraform_remote_state.platform.outputs.oidc_provider_arn
-  cluster_oidc_issuer_url   = data.terraform_remote_state.platform.outputs.cluster_oidc_issuer_url
-  node_security_group_id    = data.terraform_remote_state.platform.outputs.node_security_group_id
-  
+  cluster_name            = data.terraform_remote_state.platform.outputs.cluster_name
+  cluster_endpoint        = data.terraform_remote_state.platform.outputs.cluster_endpoint
+  cluster_ca_certificate  = base64decode(data.terraform_remote_state.platform.outputs.cluster_certificate_authority_data)
+  oidc_provider_arn       = data.terraform_remote_state.platform.outputs.oidc_provider_arn
+  cluster_oidc_issuer_url = data.terraform_remote_state.platform.outputs.cluster_oidc_issuer_url
+  node_security_group_id  = data.terraform_remote_state.platform.outputs.node_security_group_id
+
   # Foundation layer outputs
   vpc_id = data.terraform_remote_state.foundation.outputs.vpc_id
-  
+
   # CPTWN standard tags for all services
   cptwn_tags = {
-    Project            = "CPTWN-Multi-Client-EKS"
-    Environment        = var.environment
-    ManagedBy         = "Terraform"
-    CriticalInfra     = "true"
-    BackupRequired    = "true"
-    SecurityLevel     = "High"
-    Region            = var.region
-    Layer             = "SharedServices"
-    DeploymentPhase   = "Phase-2"
-    Company           = "CPTWN"
-    Architecture      = "Multi-Client"
+    Project         = "CPTWN-Multi-Client-EKS"
+    Environment     = var.environment
+    ManagedBy       = "Terraform"
+    CriticalInfra   = "true"
+    BackupRequired  = "true"
+    SecurityLevel   = "High"
+    Region          = var.region
+    Layer           = "SharedServices"
+    DeploymentPhase = "Phase-2"
+    Company         = "CPTWN"
+    Architecture    = "Multi-Client"
   }
-  
+
   # Service configuration
   cluster_autoscaler_name = "${local.cluster_name}-cluster-autoscaler"
   alb_controller_name     = "${local.cluster_name}-aws-load-balancer-controller"
@@ -103,7 +103,7 @@ locals {
 provider "kubernetes" {
   host                   = local.cluster_endpoint
   cluster_ca_certificate = local.cluster_ca_certificate
-  
+
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
@@ -116,7 +116,7 @@ provider "helm" {
   kubernetes {
     host                   = local.cluster_endpoint
     cluster_ca_certificate = local.cluster_ca_certificate
-    
+
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
@@ -128,35 +128,35 @@ provider "helm" {
 # 🏗️ SHARED SERVICES MODULE
 module "shared_services" {
   source = "../../../../../modules/shared-services"
-  
+
   # Core CPTWN configuration
   project_name = var.project_name
   environment  = var.environment
   region       = var.region
-  
+
   # EKS cluster information
-  cluster_name               = local.cluster_name
-  cluster_endpoint          = local.cluster_endpoint
-  cluster_ca_certificate    = local.cluster_ca_certificate
-  oidc_provider_arn         = local.oidc_provider_arn
-  cluster_oidc_issuer_url   = local.cluster_oidc_issuer_url
-  vpc_id                    = local.vpc_id
-  
+  cluster_name            = local.cluster_name
+  cluster_endpoint        = local.cluster_endpoint
+  cluster_ca_certificate  = local.cluster_ca_certificate
+  oidc_provider_arn       = local.oidc_provider_arn
+  cluster_oidc_issuer_url = local.cluster_oidc_issuer_url
+  vpc_id                  = local.vpc_id
+
   # Service configuration
-  enable_cluster_autoscaler      = var.enable_cluster_autoscaler
+  enable_cluster_autoscaler           = var.enable_cluster_autoscaler
   enable_aws_load_balancer_controller = var.enable_aws_load_balancer_controller
-  enable_metrics_server         = var.enable_metrics_server
-  enable_external_dns          = var.enable_external_dns
-  
+  enable_metrics_server               = var.enable_metrics_server
+  enable_external_dns                 = var.enable_external_dns
+
   # Cluster autoscaler configuration
   cluster_autoscaler_version = var.cluster_autoscaler_version
-  
+
   # AWS Load Balancer Controller configuration
   aws_load_balancer_controller_version = var.aws_load_balancer_controller_version
-  
+
   # DNS configuration
   dns_zone_ids = var.dns_zone_ids
-  
+
   # CPTWN standard tags
   additional_tags = local.cptwn_tags
 }

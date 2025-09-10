@@ -1,2 +1,2 @@
 .terraform/
-/home/dennis.juma/terraform/regions/us-east-1/layers/02-platform/production/istio-*/
+/home/dennis.juma/terraform/providers/aws/regions/us-east-1/layers/02-platform/production/istio-*/

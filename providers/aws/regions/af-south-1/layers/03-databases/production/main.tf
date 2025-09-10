@@ -11,7 +11,7 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   backend "s3" {
     # Backend configuration loaded from file
   }
@@ -19,18 +19,18 @@ terraform {
 
 provider "aws" {
   region = var.region
-  
+
   default_tags {
     tags = {
-      Project            = "CPTWN-Multi-Client-EKS"
-      Environment        = var.environment
-      ManagedBy         = "Terraform"
-      CriticalInfra     = "true"
-      BackupRequired    = "true"
-      SecurityLevel     = "High"
-      Region            = var.region
-      Layer             = "Databases"
-      DeploymentPhase   = "Phase-3"
+      Project         = "CPTWN-Multi-Client-EKS"
+      Environment     = var.environment
+      ManagedBy       = "Terraform"
+      CriticalInfra   = "true"
+      BackupRequired  = "true"
+      SecurityLevel   = "High"
+      Region          = var.region
+      Layer           = "Databases"
+      DeploymentPhase = "Phase-3"
     }
   }
 }
@@ -65,37 +65,37 @@ data "aws_availability_zones" "available" {
 locals {
   # CPTWN standard tags applied to all resources
   cptwn_tags = {
-    Project            = "CPTWN-Multi-Client-EKS"
-    Environment        = var.environment
-    ManagedBy         = "Terraform"
-    CriticalInfra     = "true"
-    BackupRequired    = "true"
-    SecurityLevel     = "High"
-    Region            = var.region
-    Layer             = "Databases"
-    DeploymentPhase   = "Phase-3"
-    Company           = "CPTWN"
-    Architecture      = "Multi-Client"
+    Project         = "CPTWN-Multi-Client-EKS"
+    Environment     = var.environment
+    ManagedBy       = "Terraform"
+    CriticalInfra   = "true"
+    BackupRequired  = "true"
+    SecurityLevel   = "High"
+    Region          = var.region
+    Layer           = "Databases"
+    DeploymentPhase = "Phase-3"
+    Company         = "CPTWN"
+    Architecture    = "Multi-Client"
   }
-  
+
   # Foundation and Platform layer data
-  vpc_id                = data.terraform_remote_state.foundation.outputs.vpc_id
-  availability_zones    = data.terraform_remote_state.foundation.outputs.availability_zones
-  cluster_name          = data.terraform_remote_state.platform.outputs.cluster_name
-  
+  vpc_id             = data.terraform_remote_state.foundation.outputs.vpc_id
+  availability_zones = data.terraform_remote_state.foundation.outputs.availability_zones
+  cluster_name       = data.terraform_remote_state.platform.outputs.cluster_name
+
   # 🎯 STRATEGY: Place databases in dedicated database subnets for security isolation
   # but match EKS nodegroup labels for proper connectivity and management
-  
+
   # MTN Ghana Prod Configuration - Use dedicated database subnets
-  mtn_ghana_database_subnet_id = data.terraform_remote_state.foundation.outputs.mtn_ghana_prod_database_subnet_ids[0]  # af-south-1a
+  mtn_ghana_database_subnet_id      = data.terraform_remote_state.foundation.outputs.mtn_ghana_prod_database_subnet_ids[0] # af-south-1a
   mtn_ghana_database_security_group = data.terraform_remote_state.foundation.outputs.mtn_ghana_prod_security_groups.database
-  mtn_ghana_eks_security_group = data.terraform_remote_state.foundation.outputs.mtn_ghana_prod_security_groups.eks
-  
+  mtn_ghana_eks_security_group      = data.terraform_remote_state.foundation.outputs.mtn_ghana_prod_security_groups.eks
+
   # Orange Madagascar Prod Configuration - Use dedicated database subnets
-  orange_madagascar_database_subnet_id = data.terraform_remote_state.foundation.outputs.orange_madagascar_prod_database_subnet_ids[0]  # af-south-1a
+  orange_madagascar_database_subnet_id      = data.terraform_remote_state.foundation.outputs.orange_madagascar_prod_database_subnet_ids[0] # af-south-1a
   orange_madagascar_database_security_group = data.terraform_remote_state.foundation.outputs.orange_madagascar_prod_security_groups.database
-  orange_madagascar_eks_security_group = data.terraform_remote_state.foundation.outputs.orange_madagascar_prod_security_groups.eks
-  
+  orange_madagascar_eks_security_group      = data.terraform_remote_state.foundation.outputs.orange_madagascar_prod_security_groups.eks
+
   # KMS Key for AF-South-1 (we'll use AWS managed key for now)
   kms_key_id = "arn:aws:kms:af-south-1:101886104835:alias/aws/ebs"
 }
@@ -123,28 +123,28 @@ data "aws_ami" "debian" {
 
 # 📱 MTN GHANA PROD DATABASE INSTANCE
 resource "aws_instance" "mtn_ghana_db_prod" {
-  ami                     = data.aws_ami.debian.id
-  instance_type           = var.mtn_ghana_config.instance_type
-  key_name                = var.key_name
-  subnet_id               = local.mtn_ghana_database_subnet_id  # Dedicated database subnet for isolation
-  vpc_security_group_ids  = [local.mtn_ghana_database_security_group]  # Database security group allows EKS access
-  availability_zone       = local.availability_zones[0]  # af-south-1a
-  
+  ami                    = data.aws_ami.debian.id
+  instance_type          = var.mtn_ghana_config.instance_type
+  key_name               = var.key_name
+  subnet_id              = local.mtn_ghana_database_subnet_id        # Dedicated database subnet for isolation
+  vpc_security_group_ids = [local.mtn_ghana_database_security_group] # Database security group allows EKS access
+  availability_zone      = local.availability_zones[0]               # af-south-1a
+
   disable_api_termination = true
   monitoring              = var.enable_monitoring
-  ebs_optimized          = true
-  
+  ebs_optimized           = true
+
   iam_instance_profile = aws_iam_instance_profile.mtn_ghana_profile.name
 
   root_block_device {
     volume_type           = "gp3"
     volume_size           = 30
     iops                  = 3000
-    throughput           = 125
-    encrypted            = var.enable_encryption
-    kms_key_id           = var.enable_encryption ? local.kms_key_id : null
+    throughput            = 125
+    encrypted             = var.enable_encryption
+    kms_key_id            = var.enable_encryption ? local.kms_key_id : null
     delete_on_termination = true
-    
+
     tags = merge(local.cptwn_tags, {
       Name              = "mtn-ghana-prod-database-root-volume"
       Client            = "mtn-ghana-prod"
@@ -155,35 +155,35 @@ resource "aws_instance" "mtn_ghana_db_prod" {
       MonitoringEnabled = "true"
       Cluster           = local.cluster_name
       # 🎯 EKS Integration Labels (match nodegroup labels for connectivity)
-      NodeGroup         = "database"
+      NodeGroup = "database"
     })
   }
 
   tags = merge(local.cptwn_tags, {
-    Name                = "mtn-ghana-prod-database"
-    Client              = "mtn-ghana-prod"
-    Purpose             = "database"
-    Service             = "database"
-    Project             = "mtn-ghana-prod"
-    Owner               = "mtn-ghana-database-team"
-    BusinessUnit        = "telecommunications"
-    CostCenter          = "mtn-ghana-production"
-    DataClass           = "restricted"
-    CriticalityLevel    = "critical"
-    BackupSchedule      = var.mtn_ghana_config.backup_schedule
-    MaintenanceWindow   = var.mtn_ghana_config.maintenance_window
-    MonitoringEnabled   = "true"
-    Cluster             = local.cluster_name
-    
+    Name              = "mtn-ghana-prod-database"
+    Client            = "mtn-ghana-prod"
+    Purpose           = "database"
+    Service           = "database"
+    Project           = "mtn-ghana-prod"
+    Owner             = "mtn-ghana-database-team"
+    BusinessUnit      = "telecommunications"
+    CostCenter        = "mtn-ghana-production"
+    DataClass         = "restricted"
+    CriticalityLevel  = "critical"
+    BackupSchedule    = var.mtn_ghana_config.backup_schedule
+    MaintenanceWindow = var.mtn_ghana_config.maintenance_window
+    MonitoringEnabled = "true"
+    Cluster           = local.cluster_name
+
     # 🎯 EKS Integration Labels (match nodegroup labels for connectivity)
-    NodeGroup           = "database"
-    
+    NodeGroup = "database"
+
     # 🔗 Client-specific connectivity labels  
-    ClientNetworkTier   = "database"
-    ClientEKSConnected  = "true"
-    EKSSecurityGroup    = local.mtn_ghana_eks_security_group
+    ClientNetworkTier  = "database"
+    ClientEKSConnected = "true"
+    EKSSecurityGroup   = local.mtn_ghana_eks_security_group
   })
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -191,12 +191,12 @@ resource "aws_instance" "mtn_ghana_db_prod" {
 
 # 💾 MTN GHANA EXTRA EBS VOLUME
 resource "aws_ebs_volume" "mtn_ghana_extra_prod" {
-  availability_zone = local.availability_zones[0]  # af-south-1a
-  size             = var.mtn_ghana_config.volume_size
-  type             = var.mtn_ghana_config.volume_type
-  iops             = var.mtn_ghana_config.volume_iops
-  encrypted        = var.enable_encryption
-  kms_key_id       = var.enable_encryption ? local.kms_key_id : null
+  availability_zone = local.availability_zones[0] # af-south-1a
+  size              = var.mtn_ghana_config.volume_size
+  type              = var.mtn_ghana_config.volume_type
+  iops              = var.mtn_ghana_config.volume_iops
+  encrypted         = var.enable_encryption
+  kms_key_id        = var.enable_encryption ? local.kms_key_id : null
 
   tags = merge(local.cptwn_tags, {
     Name              = "mtn-ghana-prod-database-data-volume"
@@ -210,7 +210,7 @@ resource "aws_ebs_volume" "mtn_ghana_extra_prod" {
     Cluster           = local.cluster_name
     NodeGroup         = "database"
   })
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -221,7 +221,7 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
   device_name = "/dev/sdf"
   volume_id   = aws_ebs_volume.mtn_ghana_extra_prod.id
   instance_id = aws_instance.mtn_ghana_db_prod.id
-  
+
   lifecycle {
     prevent_destroy = true
   }
@@ -249,7 +249,7 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
 #     Cluster           = local.cluster_name
 #     NodeGroup         = "database"
 #   })
-  
+
 #   lifecycle {
 #     prevent_destroy = true
 #   }
@@ -260,7 +260,7 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
 #   device_name = "/dev/sdg"
 #   volume_id   = aws_ebs_volume.mtn_ghana_extra2_prod.id
 #   instance_id = aws_instance.mtn_ghana_db_prod.id
-  
+
 #   lifecycle {
 #     prevent_destroy = true
 #   }
@@ -274,11 +274,11 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
 #   subnet_id               = local.orange_madagascar_database_subnet_id  # Dedicated database subnet for isolation
 #   vpc_security_group_ids  = [local.orange_madagascar_database_security_group]  # Database security group allows EKS access
 #   availability_zone       = local.availability_zones[0]  # af-south-1a
-  
+
 #   disable_api_termination = true
 #   monitoring              = var.enable_monitoring
 #   ebs_optimized          = true
-  
+
 #   iam_instance_profile = aws_iam_instance_profile.orange_madagascar_profile.name
 
 #   root_block_device {
@@ -289,7 +289,7 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
 #     encrypted            = var.enable_encryption
 #     kms_key_id           = var.enable_encryption ? local.kms_key_id : null
 #     delete_on_termination = true
-    
+
 #     tags = merge(local.cptwn_tags, {
 #       Name              = "orange-madagascar-prod-database-root-volume"
 #       Client            = "orange-madagascar-prod"
@@ -319,16 +319,16 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
 #     MaintenanceWindow   = var.orange_madagascar_config.maintenance_window
 #     MonitoringEnabled   = "true"
 #     Cluster             = local.cluster_name
-    
+
 #     # 🎯 EKS Integration Labels (match nodegroup labels for connectivity)
 #     NodeGroup           = "database"
-    
+
 #     # 🔗 Client-specific connectivity labels
 #     ClientNetworkTier   = "database"
 #     ClientEKSConnected  = "true"
 #     EKSSecurityGroup    = local.orange_madagascar_eks_security_group
 #   })
-  
+
 #   lifecycle {
 #     prevent_destroy = true
 #   }
@@ -355,7 +355,7 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
 #     Cluster           = local.cluster_name
 #     NodeGroup         = "database"
 #   })
-  
+
 #   lifecycle {
 #     prevent_destroy = true
 #   }
@@ -366,7 +366,7 @@ resource "aws_volume_attachment" "mtn_ghana_extra_prod" {
 #   device_name = "/dev/sdg"
 #   volume_id   = aws_ebs_volume.orange_madagascar_extra.id
 #   instance_id = aws_instance.orange_madagascar_db.id
-  
+
 #   lifecycle {
 #     prevent_destroy = true
 #   }
