@@ -11,9 +11,9 @@ terraform {
     }
   }
 
-  backend "s3" {
-    # Backend configuration loaded from file
-  }
+  # Backend configuration loaded from backend.hcl file
+  # Use: terraform init -backend-config=backend.hcl
+  backend "s3" {}
 }
 
 provider "aws" {
@@ -41,7 +41,7 @@ data "aws_availability_zones" "available" {
 
 # 🌐 VPC FOUNDATION - Dual NAT Gateway Setup
 module "vpc_foundation" {
-  source = "../../../../../modules/vpc-foundation"
+  source = "../../../../../../../modules/vpc-foundation"
 
   project_name       = var.project_name
   environment        = var.environment
@@ -65,7 +65,7 @@ module "vpc_foundation" {
 
 # 🏢 EZRA FINTECH PROD CLIENT SUBNETS - Perfect Isolation
 module "client_subnets_ezra_fintech_prod" {
-  source = "../../../../../modules/client-subnets"
+  source = "../../../../../../../modules/client-subnets"
 
   enabled            = true
   project_name       = var.project_name
@@ -98,7 +98,7 @@ module "client_subnets_ezra_fintech_prod" {
 
 # 🏢 MTN GHANA PROD CLIENT SUBNETS - Perfect Isolation
 module "client_subnets_mtn_ghana_prod" {
-  source = "../../../../../modules/client-subnets"
+  source = "../../../../../../../modules/client-subnets"
 
   enabled            = true
   project_name       = var.project_name
@@ -132,7 +132,7 @@ module "client_subnets_mtn_ghana_prod" {
 # 🔗 DUAL SITE-TO-SITE VPN - Multiple Secure On-Premises Connections
 module "vpn_connections" {
   for_each = var.enable_vpn ? var.vpn_connections : {}
-  source   = "../../../../../modules/site-to-site-vpn"
+  source   = "../../../../../../../modules/site-to-site-vpn"
 
   enabled             = each.value.enabled
   project_name        = "${var.project_name}-${each.key}"

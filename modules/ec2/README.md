@@ -4,14 +4,14 @@ A comprehensive, reusable Terraform module for creating EC2 instances with advan
 
 ## Features
 
-- ✅ **Flexible Instance Configuration**: Support for any instance type, AMI, and configuration
-- ✅ **Advanced Storage**: Multi-volume EBS support with encryption and custom configuration
-- ✅ **IAM Integration**: Optional IAM role creation with SSM and CloudWatch policies
-- ✅ **Security Groups**: Optional default security group creation or use existing groups
-- ✅ **Client Isolation**: Built-in support for client-specific tagging and isolation
-- ✅ **Monitoring**: CloudWatch monitoring and SSM access configuration
-- ✅ **Compatibility**: Works with existing client-infrastructure module
-- ✅ **Lifecycle Management**: Prevent destroy options and AMI change handling
+- **Flexible Instance Configuration**: Support for any instance type, AMI, and configuration
+- **Advanced Storage**: Multi-volume EBS support with encryption and custom configuration
+- **IAM Integration**: Optional IAM role creation with SSM and CloudWatch policies
+- **Security Groups**: Optional default security group creation or use existing groups
+- **Client Isolation**: Built-in support for client-specific tagging and isolation
+- **Monitoring**: CloudWatch monitoring and SSM access configuration
+- **Compatibility**: Works with existing client-infrastructure module
+- **Lifecycle Management**: Prevent destroy options and AMI change handling
 
 ## Usage Examples
 

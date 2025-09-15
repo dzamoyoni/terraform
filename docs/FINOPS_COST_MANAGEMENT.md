@@ -1,10 +1,10 @@
 # FinOps & Cost Management Strategy
 
-## 💰 Executive Summary
+## Executive Summary
 
 This document outlines our Financial Operations (FinOps) strategy for multi-cloud infrastructure, focusing on cost optimization, budget control, and financial accountability across AWS, GCP, and Azure deployments.
 
-## 🎯 FinOps Principles
+## FinOps Principles
 
 ### Core Tenets
 1. **Transparency**: Real-time visibility into cloud spending
@@ -23,7 +23,7 @@ This document outlines our Financial Operations (FinOps) strategy for multi-clou
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 🏷️ Resource Tagging Strategy
+## Resource Tagging Strategy
 
 ### Mandatory Tags
 Every resource must include these standardized tags for cost allocation:
@@ -57,7 +57,7 @@ tags = {
 - **Cost Allocation Reports**: Automated monthly reports by tag dimensions
 - **Tag Standardization**: Centralized tag dictionaries and validation
 
-## 📊 Cost Visibility & Monitoring
+## Cost Visibility & Monitoring
 
 ### Real-Time Dashboards
 
@@ -107,7 +107,7 @@ resource "aws_budgets_budget" "infrastructure" {
 }
 ```
 
-## 💡 Cost Optimization Strategies
+## Cost Optimization Strategies
 
 ### 1. Right-Sizing Resources
 
@@ -203,7 +203,7 @@ resource "aws_autoscaling_group" "mixed" {
 }
 ```
 
-## 🎯 Budget Management
+## Budget Management
 
 ### Budget Allocation
 ```yaml
@@ -251,7 +251,7 @@ resource "aws_budgets_budget_action" "stop_instances" {
 }
 ```
 
-## 📈 Financial Metrics & KPIs
+## Financial Metrics & KPIs
 
 ### Cost Efficiency Metrics
 1. **Cost per Transaction**: Monthly cost divided by transaction volume
@@ -285,7 +285,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cost" {
 }
 ```
 
-## 🔄 Cost Optimization Workflows
+## Cost Optimization Workflows
 
 ### Weekly Reviews
 1. **Resource Utilization Analysis**
@@ -320,7 +320,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cost" {
    - Technology refresh planning
    - Contract renewal negotiations
 
-## 🛡️ Cost Governance
+## Cost Governance
 
 ### Approval Workflows
 - **Small Changes** (<$100/month): Automatic approval
@@ -350,7 +350,7 @@ resource "aws_config_config_rule" "instance_type_restriction" {
 - **Monthly**: Variance > 10% from forecast
 - **Emergency**: Single resource > $500/day
 
-## 📋 Action Items
+## Action Items
 
 ### Immediate (0-30 days)
 - [ ] Implement comprehensive resource tagging

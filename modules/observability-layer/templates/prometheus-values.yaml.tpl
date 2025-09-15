@@ -16,7 +16,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: gp3
+          storageClassName: gp2
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
@@ -146,11 +146,11 @@ prometheus:
 
 # Grafana configuration
 grafana:
-  enabled: false  # We'll use external/central Grafana
+  enabled: false  # We'll use separate Grafana deployment
 
 # AlertManager configuration  
 alertmanager:
-  enabled: false  # Alerts go to central system
+  enabled: %{ if enable_alertmanager }true%{ else }false%{ endif }
 
 # Node exporter for node metrics
 nodeExporter:

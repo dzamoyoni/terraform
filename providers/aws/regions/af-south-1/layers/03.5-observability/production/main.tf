@@ -25,6 +25,14 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.11"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.4"
+    }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = "~> 1.14"
+    }
   }
 
   backend "s3" {
@@ -97,6 +105,19 @@ provider "helm" {
   }
 }
 
+# Configure kubectl provider
+provider "kubectl" {
+  host                   = data.aws_ssm_parameter.cluster_endpoint.value
+  cluster_ca_certificate = base64decode(data.aws_ssm_parameter.cluster_ca_certificate.value)
+  load_config_file       = false
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", data.aws_ssm_parameter.cluster_name.value]
+  }
+}
+
 # ============================================================================
 # Local Variables
 # ============================================================================
@@ -158,7 +179,7 @@ locals {
 # ============================================================================
 
 module "observability" {
-  source = "../../../../../modules/observability-layer"
+  source = "../../../../../../../modules/observability-layer"
 
   # Core Configuration
   project_name            = var.project_name
@@ -173,6 +194,10 @@ module "observability" {
   # Tags and Labels
   common_tags   = local.common_tags
   common_labels = local.common_labels
+
+  # EBS CSI Configuration
+  node_group_role_names = ["cptwn-eks-01-mtn-gh-nodes-20250915111530579200000002"]
+  enable_gp3_storage    = false  # Use cheaper GP2 for now
 
   # S3 Configuration
   logs_retention_days   = var.logs_retention_days
@@ -228,6 +253,37 @@ module "observability" {
 
   # Cross-region replication (supported variable)
   enable_cross_region_replication = var.enable_cross_region_replication
+
+  # ============================================================================
+  # PRODUCTION-GRADE FEATURES - NEW
+  # ============================================================================
+  
+  # AlertManager Configuration
+  enable_alertmanager         = var.enable_alertmanager
+  alertmanager_storage_class  = var.alertmanager_storage_class
+  alertmanager_replicas       = var.alertmanager_replicas
+  slack_webhook_url           = var.slack_webhook_url
+  alert_email                 = var.alert_email
+  
+  # Grafana Configuration - TEMPORARY MODE FOR TESTING
+  enable_grafana              = var.enable_grafana
+  grafana_temporary_mode      = true  # 🧪 Temporary mode - no persistence for testing
+  grafana_admin_password      = var.grafana_admin_password
+  
+  # Enhanced Monitoring
+  enable_enhanced_monitoring  = var.enable_enhanced_monitoring
+  enable_postgres_monitoring  = var.enable_postgres_monitoring
+  postgres_endpoints          = var.postgres_endpoints
+  
+  # High Availability Configuration
+  prometheus_replicas         = var.prometheus_replicas
+  enable_prometheus_ha        = var.enable_prometheus_ha
+  prometheus_retention        = var.prometheus_retention
+  prometheus_retention_size   = var.prometheus_retention_size
+  
+  # Security Configuration
+  enable_network_policies     = var.enable_network_policies
+  enable_pod_security_policies = var.enable_pod_security_policies
 
   depends_on = [
     data.aws_ssm_parameter.cluster_name,

@@ -114,3 +114,204 @@ variable "additional_tags" {
   type        = map(string)
   default     = {}
 }
+
+# =============================================================================
+# 🕸️ ISTIO SERVICE MESH CONFIGURATION
+# =============================================================================
+
+variable "enable_istio_service_mesh" {
+  description = "Enable Istio service mesh deployment"
+  type        = bool
+  default     = true
+}
+
+variable "istio_version" {
+  description = "Version of Istio to deploy"
+  type        = string
+  default     = "1.27.1"  # Updated to latest stable with ambient improvements
+}
+
+variable "istio_mesh_id" {
+  description = "Istio mesh ID"
+  type        = string
+  default     = "cptwn-mesh-af-south-1"
+}
+
+variable "istio_cluster_network" {
+  description = "Istio cluster network identifier"
+  type        = string
+  default     = "af-south-1-network"
+}
+
+variable "istio_trust_domain" {
+  description = "Istio trust domain"
+  type        = string
+  default     = "cluster.local"
+}
+
+# Ambient Mode Configuration
+variable "enable_istio_ambient_mode" {
+  description = "Enable Istio ambient mode"
+  type        = bool
+  default     = true
+}
+
+# Ingress Gateway Configuration
+variable "enable_istio_ingress_gateway" {
+  description = "Enable Istio ingress gateway (ClusterIP)"
+  type        = bool
+  default     = true
+}
+
+variable "istio_ingress_gateway_replicas" {
+  description = "Number of ingress gateway replicas"
+  type        = number
+  default     = 3
+}
+
+variable "istio_ingress_gateway_resources" {
+  description = "Resource configuration for ingress gateway"
+  type = object({
+    requests = object({
+      cpu    = string
+      memory = string
+    })
+    limits = object({
+      cpu    = string
+      memory = string
+    })
+  })
+  default = {
+    requests = {
+      cpu    = "200m"
+      memory = "256Mi"
+    }
+    limits = {
+      cpu    = "1000m"
+      memory = "1Gi"
+    }
+  }
+}
+
+variable "istio_ingress_gateway_autoscale_enabled" {
+  description = "Enable autoscaling for ingress gateway"
+  type        = bool
+  default     = true
+}
+
+variable "istio_ingress_gateway_autoscale_min" {
+  description = "Minimum replicas for ingress gateway autoscaling"
+  type        = number
+  default     = 2
+}
+
+variable "istio_ingress_gateway_autoscale_max" {
+  description = "Maximum replicas for ingress gateway autoscaling"
+  type        = number
+  default     = 10
+}
+
+# Istiod Configuration
+variable "istio_istiod_resources" {
+  description = "Resource configuration for istiod"
+  type = object({
+    requests = object({
+      cpu    = string
+      memory = string
+    })
+    limits = object({
+      cpu    = string
+      memory = string
+    })
+  })
+  default = {
+    requests = {
+      cpu    = "500m"
+      memory = "2Gi"
+    }
+    limits = {
+      cpu    = "1000m"
+      memory = "4Gi"
+    }
+  }
+}
+
+variable "istio_istiod_autoscale_enabled" {
+  description = "Enable autoscaling for istiod"
+  type        = bool
+  default     = true
+}
+
+variable "istio_istiod_autoscale_min" {
+  description = "Minimum replicas for istiod autoscaling"
+  type        = number
+  default     = 2
+}
+
+variable "istio_istiod_autoscale_max" {
+  description = "Maximum replicas for istiod autoscaling"
+  type        = number
+  default     = 5
+}
+
+# Application Namespace Configuration - Multi-Client
+variable "istio_application_namespaces" {
+  description = "Configuration for application namespaces with different dataplane modes"
+  type = map(object({
+    dataplane_mode = string # "ambient" or "sidecar"
+    client         = optional(string)
+    tenant         = optional(string)
+  }))
+  default = {
+    # MTN Ghana - Production workloads using ambient mode
+    "mtn-ghana-prod" = {
+      dataplane_mode = "ambient"
+      client         = "mtn-ghana"
+      tenant         = "mtn-ghana-prod"
+    }
+    # Orange Madagascar - Production workloads using ambient mode  
+    "orange-madagascar-prod" = {
+      dataplane_mode = "ambient"
+      client         = "orange-madagascar"
+      tenant         = "orange-madagascar-prod"
+    }
+    # CPTWN Platform services - Using sidecar for advanced policies
+    "cptwn-platform" = {
+      dataplane_mode = "sidecar"
+      client         = "cptwn"
+      tenant         = "platform"
+    }
+  }
+}
+
+# Observability Integration with Layer 03.5
+variable "enable_istio_distributed_tracing" {
+  description = "Enable distributed tracing integration with existing Tempo"
+  type        = bool
+  default     = true
+}
+
+variable "enable_istio_access_logging" {
+  description = "Enable access logging integration with existing Fluent Bit"
+  type        = bool
+  default     = true
+}
+
+variable "istio_tracing_sampling_rate" {
+  description = "Tracing sampling rate for production (0.0 to 1.0)"
+  type        = number
+  default     = 0.01 # 1% sampling for production
+}
+
+# Monitoring Integration
+variable "enable_istio_service_monitor" {
+  description = "Enable ServiceMonitor for Prometheus integration"
+  type        = bool
+  default     = true
+}
+
+variable "enable_istio_prometheus_rules" {
+  description = "Enable PrometheusRules for Istio alerting"
+  type        = bool
+  default     = true
+}

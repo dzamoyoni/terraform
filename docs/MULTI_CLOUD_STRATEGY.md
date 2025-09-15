@@ -1,10 +1,10 @@
 # Multi-Cloud Infrastructure Strategy
 
-## 🌍 Executive Summary
+## Executive Summary
 
 This document outlines our strategic approach to multi-cloud infrastructure, enabling resilient, cost-effective, and scalable deployments across AWS, Google Cloud Platform (GCP), and Microsoft Azure.
 
-## 🎯 Why Multi-Cloud?
+## Why Multi-Cloud?
 
 ### Strategic Benefits
 
@@ -28,7 +28,7 @@ This document outlines our strategic approach to multi-cloud infrastructure, ena
    - Avoid waiting for feature parity across clouds
    - Experiment with new technologies without full commitment
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### Provider-Centric Organization
 ```
@@ -73,7 +73,7 @@ terraform/
    - Security services
    - Governance tools
 
-## 🌐 Regional Strategy
+##  Regional Strategy
 
 ### Current Deployments
 - **Primary**: AWS AF-South-1 (Cape Town)
@@ -87,7 +87,7 @@ terraform/
 4. **Cost effectiveness** - Balance performance with costs
 5. **Disaster recovery** - Geographic distribution for resilience
 
-## 🔧 Implementation Patterns
+##  Implementation Patterns
 
 ### Cloud-Agnostic Modules
 Our modules abstract cloud-specific implementations:
@@ -112,7 +112,7 @@ module "kubernetes_cluster" {
 - **Automated deployment** - CI/CD pipelines for consistency
 - **Environment parity** - Dev/staging mirrors production
 
-## 📊 Cost Management Strategy
+##  Cost Management Strategy
 
 ### Resource Tagging Strategy
 Every resource includes standardized tags:
@@ -135,7 +135,7 @@ tags = {
 4. **Auto-scaling** - Dynamic resource allocation
 5. **Cross-cloud arbitrage** - Leverage pricing differences
 
-## 🛡️ Security & Governance
+## Security & Governance
 
 ### Security Principles
 1. **Zero trust architecture** - Verify every connection
@@ -149,7 +149,7 @@ tags = {
 - **Audit logging** - Comprehensive activity tracking
 - **Regular reviews** - Security and cost assessments
 
-## 🚀 Benefits Realized
+## Benefits Realized
 
 ### Business Impact
 - **99.9% availability** across multi-cloud deployments
@@ -163,13 +163,13 @@ tags = {
 - **Enhanced disaster recovery** with cross-cloud backups
 - **Future-proof architecture** ready for emerging technologies
 
-## 📈 Success Metrics
+## Success Metrics
 
 ### Key Performance Indicators (KPIs)
 - **Availability**: > 99.9% uptime across all services
 - **Cost Efficiency**: Cost per transaction trending down
 - **Deployment Speed**: Time to production < 30 minutes
-- **Recovery Time**: RTO < 4 hours, RPO < 1 hour
+- **Recovery Time**: RTO < 3 hours
 
 ### Monitoring & Reporting
 - Real-time dashboards for infrastructure health

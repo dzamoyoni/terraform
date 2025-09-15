@@ -1,4 +1,4 @@
-# 🚀 Shared Services Layer - AF-South-1 Production
+# Shared Services Layer - AF-South-1 Production
 # KUBERNETES SHARED SERVICES
 # Deploys essential Kubernetes services on top of EKS platform
 # Services: Cluster Autoscaler, AWS Load Balancer Controller, Metrics Server
@@ -43,7 +43,7 @@ provider "aws" {
   }
 }
 
-# 📊 DATA SOURCES - Foundation and Platform Layer Outputs
+# DATA SOURCES - Foundation and Platform Layer Outputs
 data "terraform_remote_state" "foundation" {
   backend = "s3"
   config = {
@@ -62,11 +62,11 @@ data "terraform_remote_state" "platform" {
   }
 }
 
-# 📊 DATA SOURCES - EKS and AWS Account Info
+# DATA SOURCES - EKS and AWS Account Info
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# 🔍 LOCALS - Platform Layer Data and CPTWN Standards
+# LOCALS - Platform Layer Data and CPTWN Standards
 locals {
   # Platform layer outputs
   cluster_name            = data.terraform_remote_state.platform.outputs.cluster_name
@@ -99,7 +99,7 @@ locals {
   alb_controller_name     = "${local.cluster_name}-aws-load-balancer-controller"
 }
 
-# 🔧 Kubernetes Provider Configuration
+#  Kubernetes Provider Configuration
 provider "kubernetes" {
   host                   = local.cluster_endpoint
   cluster_ca_certificate = local.cluster_ca_certificate
@@ -111,7 +111,7 @@ provider "kubernetes" {
   }
 }
 
-# 🎡 Helm Provider Configuration
+#  Helm Provider Configuration
 provider "helm" {
   kubernetes {
     host                   = local.cluster_endpoint
@@ -125,9 +125,9 @@ provider "helm" {
   }
 }
 
-# 🏗️ SHARED SERVICES MODULE
+#  SHARED SERVICES MODULE
 module "shared_services" {
-  source = "../../../../../modules/shared-services"
+  source = "../../../../../../../modules/shared-services"
 
   # Core CPTWN configuration
   project_name = var.project_name
@@ -159,4 +159,64 @@ module "shared_services" {
 
   # CPTWN standard tags
   additional_tags = local.cptwn_tags
+}
+
+# =============================================================================
+# 🕸️ ISTIO SERVICE MESH MODULE - PRODUCTION GRADE
+# =============================================================================
+# Deploy Istio with ambient mode, ClusterIP ingress, and integration
+# with existing observability layer (Layer 03.5)
+
+module "istio_service_mesh" {
+  source = "../../../../../../../modules/istio-service-mesh"
+  
+  # Only deploy if enabled
+  count = var.enable_istio_service_mesh ? 1 : 0
+
+  # Core CPTWN configuration
+  project_name = var.project_name
+  environment  = var.environment
+  region       = var.region
+  cluster_name = local.cluster_name
+
+  # Istio configuration
+  istio_version      = var.istio_version
+  mesh_id           = var.istio_mesh_id
+  cluster_network   = var.istio_cluster_network
+  trust_domain      = var.istio_trust_domain
+
+  # Ambient mode configuration
+  enable_ambient_mode = var.enable_istio_ambient_mode
+
+  # Ingress gateway configuration - ClusterIP for internal routing
+  enable_ingress_gateway = var.enable_istio_ingress_gateway
+  ingress_gateway_replicas = var.istio_ingress_gateway_replicas
+  ingress_gateway_resources = var.istio_ingress_gateway_resources
+  ingress_gateway_autoscale_enabled = var.istio_ingress_gateway_autoscale_enabled
+  ingress_gateway_autoscale_min = var.istio_ingress_gateway_autoscale_min
+  ingress_gateway_autoscale_max = var.istio_ingress_gateway_autoscale_max
+  
+  # Production resource configuration
+  istiod_resources = var.istio_istiod_resources
+  istiod_autoscale_enabled = var.istio_istiod_autoscale_enabled
+  istiod_autoscale_min = var.istio_istiod_autoscale_min
+  istiod_autoscale_max = var.istio_istiod_autoscale_max
+
+  # Application namespace configuration - Multi-client setup
+  application_namespaces = var.istio_application_namespaces
+
+  # Observability integration with existing Layer 03.5
+  enable_distributed_tracing = var.enable_istio_distributed_tracing
+  enable_access_logging     = var.enable_istio_access_logging
+  tracing_sampling_rate     = var.istio_tracing_sampling_rate
+  
+  # Monitoring integration with existing Prometheus/Grafana
+  enable_service_monitor    = var.enable_istio_service_monitor
+  enable_prometheus_rules   = var.enable_istio_prometheus_rules
+
+  # CPTWN standard tags
+  additional_tags = local.cptwn_tags
+  
+  # Ensure shared services are deployed first
+  depends_on = [module.shared_services]
 }

@@ -1,4 +1,4 @@
-# 📊 Outputs for VPC Foundation Module
+# Outputs for VPC Foundation Module
 
 # VPC Information
 output "vpc_id" {

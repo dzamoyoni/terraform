@@ -33,7 +33,7 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
-# 🔐 ULTRA-SECURE S3 BUCKET FOR TERRAFORM STATE
+#  ULTRA-SECURE S3 BUCKET FOR TERRAFORM STATE
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "cptwn-terraform-state-ezra"
 
@@ -226,7 +226,7 @@ resource "aws_s3_bucket_public_access_block" "access_logs" {
   }
 }
 
-# 🔐 CRITICAL DYNAMODB TABLE FOR STATE LOCKING
+# CRITICAL DYNAMODB TABLE FOR STATE LOCKING
 resource "aws_dynamodb_table" "terraform_locks" {
   name         = "terraform-locks-af-south"
   billing_mode = "PAY_PER_REQUEST"

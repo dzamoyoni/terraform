@@ -1,4 +1,4 @@
-# 🏗️ VPC Foundation Module - Security-First Design
+# VPC Foundation Module - Security-First Design
 # Provides secure VPC infrastructure with dual NAT gateways for HA
 
 terraform {
@@ -11,7 +11,7 @@ terraform {
   }
 }
 
-# 🌐 MAIN VPC - High Availability Design
+# MAIN VPC - High Availability Design
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -30,7 +30,7 @@ resource "aws_vpc" "main" {
   # }
 }
 
-# 🌍 INTERNET GATEWAY
+#  INTERNET GATEWAY
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
   
@@ -45,7 +45,7 @@ resource "aws_internet_gateway" "main" {
   # }
 }
 
-# 🏢 PUBLIC SUBNETS - For NAT Gateways and Load Balancers
+# PUBLIC SUBNETS - For NAT Gateways and Load Balancers
 resource "aws_subnet" "public" {
   count = length(var.availability_zones)
   
@@ -68,7 +68,7 @@ resource "aws_subnet" "public" {
   # }
 }
 
-# 🔌 ELASTIC IPS for NAT Gateways
+#  ELASTIC IPS for NAT Gateways
 resource "aws_eip" "nat" {
   count = length(var.availability_zones)
   
@@ -88,7 +88,7 @@ resource "aws_eip" "nat" {
   # }
 }
 
-# 🌐 NAT GATEWAYS - Dual for High Availability
+# NAT GATEWAYS - Dual for High Availability
 resource "aws_nat_gateway" "main" {
   count = length(var.availability_zones)
   
@@ -109,7 +109,7 @@ resource "aws_nat_gateway" "main" {
   # }
 }
 
-# 📋 PUBLIC ROUTE TABLE
+#  PUBLIC ROUTE TABLE
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   
@@ -129,7 +129,7 @@ resource "aws_route_table" "public" {
   # }
 }
 
-# 📋 PUBLIC ROUTE TABLE ASSOCIATIONS
+# PUBLIC ROUTE TABLE ASSOCIATIONS
 resource "aws_route_table_association" "public" {
   count = length(aws_subnet.public)
   
@@ -141,7 +141,7 @@ resource "aws_route_table_association" "public" {
   # }
 }
 
-# 🏢 PLATFORM SUBNETS - For EKS Control Plane & Shared Services
+# PLATFORM SUBNETS - For EKS Control Plane & Shared Services
 resource "aws_subnet" "platform" {
   count = length(var.availability_zones)
   
@@ -163,7 +163,7 @@ resource "aws_subnet" "platform" {
   # }
 }
 
-# 📋 PLATFORM ROUTE TABLES - AZ-specific for HA
+#  PLATFORM ROUTE TABLES - AZ-specific for HA
 resource "aws_route_table" "platform" {
   count = length(var.availability_zones)
   
@@ -186,7 +186,7 @@ resource "aws_route_table" "platform" {
   # }
 }
 
-# 📋 PLATFORM ROUTE TABLE ASSOCIATIONS
+# PLATFORM ROUTE TABLE ASSOCIATIONS
 resource "aws_route_table_association" "platform" {
   count = length(aws_subnet.platform)
   
@@ -198,7 +198,7 @@ resource "aws_route_table_association" "platform" {
   # }
 }
 
-# 📊 VPC FLOW LOGS - Security & Monitoring
+# VPC FLOW LOGS - Security & Monitoring
 resource "aws_flow_log" "vpc" {
   iam_role_arn    = aws_iam_role.flow_log.arn
   log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
@@ -216,7 +216,7 @@ resource "aws_flow_log" "vpc" {
   # }
 }
 
-# 📋 CLOUDWATCH LOG GROUP for VPC Flow Logs
+# CLOUDWATCH LOG GROUP for VPC Flow Logs
 resource "aws_cloudwatch_log_group" "vpc_flow_log" {
   name              = "/aws/vpc/flowlogs/${var.project_name}-${var.region}"
   retention_in_days = 30
@@ -232,7 +232,7 @@ resource "aws_cloudwatch_log_group" "vpc_flow_log" {
   # }
 }
 
-# 🔐 IAM ROLE for VPC Flow Logs
+# IAM ROLE for VPC Flow Logs
 resource "aws_iam_role" "flow_log" {
   name = "${var.project_name}-vpc-flow-log-role-${var.region}"
   
@@ -260,7 +260,7 @@ resource "aws_iam_role" "flow_log" {
   # }
 }
 
-# 📋 IAM POLICY for VPC Flow Logs
+# IAM POLICY for VPC Flow Logs
 resource "aws_iam_role_policy" "flow_log" {
   name = "${var.project_name}-vpc-flow-log-policy"
   role = aws_iam_role.flow_log.id
@@ -287,7 +287,7 @@ resource "aws_iam_role_policy" "flow_log" {
   # }
 }
 
-# 🔗 VPC ENDPOINTS - Cost Optimization
+# VPC ENDPOINTS - Cost Optimization
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.region}.s3"
@@ -347,7 +347,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   # }
 }
 
-# 🔐 SECURITY GROUP for VPC Endpoints
+# SECURITY GROUP for VPC Endpoints
 resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "${var.project_name}-vpc-endpoints-"
   vpc_id      = aws_vpc.main.id

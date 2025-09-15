@@ -20,10 +20,6 @@ variable "oidc_provider_arn" {
   type        = string
 }
 
-variable "oidc_provider_id" {
-  description = "ID of the OIDC provider"
-  type        = string
-}
 
 variable "helm_chart_version" {
   description = "Version of the Helm chart"
@@ -59,8 +55,20 @@ variable "skip_nodes_with_local_storage" {
   default     = false
 }
 
+variable "external_irsa_role_arn" {
+  description = "External IRSA role ARN. If provided, the module will use this instead of creating its own IRSA role."
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
   default     = {}
+}
+
+variable "manage_chart_service_account" {
+  description = "Whether to manage the service account created by the Helm chart"
+  type        = bool
+  default     = true
 }

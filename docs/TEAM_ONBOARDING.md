@@ -1,10 +1,10 @@
 # Team Onboarding Guide
 
-## 👋 Welcome to the Infrastructure Team
+## Welcome to the Infrastructure Team
 
 This guide will help you understand our multi-cloud infrastructure approach and get you up and running with our Terraform-managed deployments.
 
-## 📚 Essential Reading (30 minutes)
+## Essential Reading (30 minutes)
 
 Please read these documents in order to understand our infrastructure strategy:
 
@@ -12,7 +12,7 @@ Please read these documents in order to understand our infrastructure strategy:
 2. **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - How to deploy and scale infrastructure
 3. **[FinOps & Cost Management](FINOPS_COST_MANAGEMENT.md)** - Cost optimization and financial governance
 
-## 🛠️ Development Environment Setup
+## Development Environment Setup
 
 ### Prerequisites
 Install these tools on your local machine:
@@ -62,19 +62,19 @@ aws configure
 aws sts get-caller-identity
 ```
 
-## 🏗️ Repository Structure
+## Repository Structure
 
 Our infrastructure follows a logical, scalable organization:
 
 ```
 terraform/
-├── docs/                    # 📚 Documentation (you are here)
-├── modules/                 # 🧩 Reusable Terraform modules
+├── docs/                    # Documentation (you are here)
+├── modules/                 # Reusable Terraform modules
 │   ├── vpc-foundation/      # Network foundation
 │   ├── eks-platform/        # Kubernetes platform
 │   ├── client-subnets/      # Client isolation
 │   └── observability-layer/ # Monitoring & logging
-├── providers/               # ☁️ Cloud-specific deployments
+├── providers/               # Cloud-specific deployments
 │   ├── aws/                 # Amazon Web Services
 │   │   ├── modules/         # AWS-specific modules
 │   │   └── regions/         # Regional deployments
@@ -82,10 +82,10 @@ terraform/
 │   │       └── us-east-1/   # N. Virginia region
 │   ├── gcp/                 # Google Cloud Platform (future)
 │   └── azure/               # Microsoft Azure (future)
-├── shared/                  # 🤝 Cross-cloud configuration
+├── shared/                  # Cross-cloud configuration
 │   ├── backend-configs/     # Terraform state backend configs
 │   └── policies/            # Governance policies
-└── scripts/                 # 🔧 Automation scripts
+└── scripts/                 # Automation scripts
 ```
 
 ### Understanding Layers
@@ -99,7 +99,7 @@ Our infrastructure is deployed in logical layers:
 5. **03.5-observability**: Monitoring, logging, tracing
 6. **06-shared-services**: Load balancers, DNS, autoscaling
 
-## 🚀 Your First Deployment
+## Your First Deployment
 
 Let's walk through deploying a complete environment step-by-step.
 
@@ -149,7 +149,7 @@ aws eks describe-cluster --name cptwn-eks-01 --region af-south-1
 aws ec2 describe-instances --region af-south-1 --filters "Name=instance-state-name,Values=running" --query 'Reservations[].Instances[].[InstanceId,InstanceType,Tags[?Key==`Name`].Value[]]' --output table
 ```
 
-## 🎯 Common Tasks
+## Common Tasks
 
 ### Adding a New Client
 
@@ -262,7 +262,7 @@ kubectl get nodes
 kubectl get pods --all-namespaces
 ```
 
-## 📖 Learning Resources
+## Learning Resources
 
 ### Terraform
 - [Terraform Documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
@@ -279,7 +279,7 @@ kubectl get pods --all-namespaces
 - [EC2 User Guide](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/)
 - [S3 User Guide](https://docs.aws.amazon.com/s3/latest/userguide/)
 
-## 🤝 Team Collaboration
+## Team Collaboration
 
 ### Code Review Process
 1. **Create feature branch**: `git checkout -b feature/new-client-setup`
@@ -322,7 +322,7 @@ kubectl get pods --all-namespaces
 - **Complete AWS outage**: Activate GCP/Azure disaster recovery plan
 - **Security breach**: Follow incident response playbook
 
-## 📈 Growth and Learning
+## Growth and Learning
 
 ### Next Steps (First 30 Days)
 - [ ] Complete this onboarding guide

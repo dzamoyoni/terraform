@@ -1,7 +1,7 @@
-# 🚀 Shared Services Layer Outputs
+# Shared Services Layer Outputs
 # Exposes shared services information for other layers and external use
 
-# 🎯 CLUSTER AUTOSCALER OUTPUTS
+#  CLUSTER AUTOSCALER OUTPUTS
 output "cluster_autoscaler_enabled" {
   description = "Whether cluster autoscaler is enabled"
   value       = var.enable_cluster_autoscaler
@@ -17,7 +17,7 @@ output "cluster_autoscaler_service_account_arn" {
   value       = var.enable_cluster_autoscaler ? module.shared_services.cluster_autoscaler_service_account_arn : null
 }
 
-# 🎯 AWS LOAD BALANCER CONTROLLER OUTPUTS
+# AWS LOAD BALANCER CONTROLLER OUTPUTS
 output "aws_load_balancer_controller_enabled" {
   description = "Whether AWS Load Balancer Controller is enabled"
   value       = var.enable_aws_load_balancer_controller
@@ -33,7 +33,7 @@ output "aws_load_balancer_controller_service_account_arn" {
   value       = var.enable_aws_load_balancer_controller ? module.shared_services.aws_load_balancer_controller_service_account_arn : null
 }
 
-# 🎯 METRICS SERVER OUTPUTS
+#  METRICS SERVER OUTPUTS
 output "metrics_server_enabled" {
   description = "Whether metrics server is enabled"
   value       = var.enable_metrics_server
@@ -44,7 +44,7 @@ output "metrics_server_version" {
   value       = var.metrics_server_version
 }
 
-# 🎯 EXTERNAL DNS OUTPUTS
+#  EXTERNAL DNS OUTPUTS
 output "external_dns_enabled" {
   description = "Whether external DNS is enabled"
   value       = var.enable_external_dns
@@ -55,7 +55,7 @@ output "external_dns_service_account_arn" {
   value       = var.enable_external_dns ? module.shared_services.external_dns_service_account_arn : null
 }
 
-# 🎯 SHARED SERVICES SUMMARY
+#  SHARED SERVICES SUMMARY
 output "shared_services_summary" {
   description = "Summary of deployed shared services"
   value = {
@@ -86,7 +86,7 @@ output "shared_services_summary" {
   }
 }
 
-# 🔒 SECURITY NOTICE
+#  SECURITY NOTICE
 output "security_notice" {
   description = "Important security and operational information"
   value = {

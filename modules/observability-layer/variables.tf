@@ -39,6 +39,18 @@ variable "cluster_oidc_issuer_arn" {
   type        = string
 }
 
+variable "node_group_role_names" {
+  description = "List of existing node group IAM role names for EBS CSI policy attachment"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_gp3_storage" {
+  description = "Enable GP3 StorageClass creation (more performant but potentially more expensive)"
+  type        = bool
+  default     = false
+}
+
 # ============================================================================
 # Tenant Configuration
 # ============================================================================
@@ -307,4 +319,171 @@ variable "replication_destination_region" {
   description = "Destination region for S3 cross-region replication"
   type        = string
   default     = ""
+}
+
+# ============================================================================
+# PRODUCTION-GRADE OBSERVABILITY VARIABLES
+# ============================================================================
+
+# ============================================================================
+# ALERTING & NOTIFICATION CONFIGURATION
+# ============================================================================
+
+variable "enable_alertmanager" {
+  description = "Enable AlertManager for production alerting"
+  type        = bool
+  default     = true
+}
+
+variable "alertmanager_storage_size" {
+  description = "Storage size for AlertManager"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL for alert notifications"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "alert_email" {
+  description = "Email address for alert notifications"
+  type        = string
+  default     = ""
+}
+
+# ============================================================================
+# GRAFANA CONFIGURATION
+# ============================================================================
+
+variable "enable_grafana" {
+  description = "Enable Grafana for local dashboards and visualization"
+  type        = bool
+  default     = true
+}
+
+variable "grafana_admin_password" {
+  description = "Admin password for Grafana (generated if empty)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "grafana_storage_size" {
+  description = "Storage size for Grafana"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "grafana_temporary_mode" {
+  description = "Deploy Grafana in temporary mode (no persistence, faster startup)"
+  type        = bool
+  default     = true
+}
+
+# ============================================================================
+# ENHANCED MONITORING & SERVICE DISCOVERY
+# ============================================================================
+
+variable "enable_enhanced_monitoring" {
+  description = "Enable enhanced monitoring features (ServiceMonitors, PrometheusRules)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_postgres_monitoring" {
+  description = "Enable PostgreSQL monitoring for client databases"
+  type        = bool
+  default     = false
+}
+
+variable "postgres_endpoints" {
+  description = "PostgreSQL endpoints to monitor"
+  type = map(object({
+    host     = string
+    port     = string
+    database = string
+    client   = string
+  }))
+  default = {}
+}
+
+# ============================================================================
+# HIGH AVAILABILITY CONFIGURATION
+# ============================================================================
+
+variable "prometheus_replicas" {
+  description = "Number of Prometheus replicas for high availability"
+  type        = number
+  default     = 2
+  validation {
+    condition     = var.prometheus_replicas >= 1 && var.prometheus_replicas <= 5
+    error_message = "Prometheus replicas must be between 1 and 5."
+  }
+}
+
+variable "enable_prometheus_ha" {
+  description = "Enable Prometheus high availability mode"
+  type        = bool
+  default     = true
+}
+
+# ============================================================================
+# SECURITY CONFIGURATION
+# ============================================================================
+
+variable "enable_network_policies" {
+  description = "Enable Kubernetes Network Policies for observability components"
+  type        = bool
+  default     = true
+}
+
+variable "enable_pod_security_policies" {
+  description = "Enable Pod Security Policies for enhanced security"
+  type        = bool
+  default     = true
+}
+
+# ============================================================================
+# PERFORMANCE & RESOURCE OPTIMIZATION
+# ============================================================================
+
+variable "prometheus_retention" {
+  description = "How long to retain Prometheus metrics"
+  type        = string
+  default     = "30d"
+}
+
+variable "prometheus_retention_size" {
+  description = "Maximum size of Prometheus storage before oldest data is deleted"
+  type        = string
+  default     = "25GB"
+}
+
+# ============================================================================
+# ALERTMANAGER ADDITIONAL CONFIGURATION
+# ============================================================================
+
+variable "alertmanager_storage_class" {
+  description = "Storage class for AlertManager persistent volume"
+  type        = string
+  default     = "gp2"
+}
+
+variable "alertmanager_replicas" {
+  description = "Number of AlertManager replicas for high availability"
+  type        = number
+  default     = 2
+  validation {
+    condition     = var.alertmanager_replicas >= 1 && var.alertmanager_replicas <= 5
+    error_message = "AlertManager replicas must be between 1 and 5."
+  }
+}
+
+variable "enable_security_context" {
+  description = "Enable security context for pods (runAsNonRoot, etc.)"
+  type        = bool
+  default     = true
 }

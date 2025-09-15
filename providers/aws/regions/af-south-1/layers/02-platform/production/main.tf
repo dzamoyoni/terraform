@@ -1,4 +1,4 @@
-# 🏗️ Platform Layer - AF-South-1 Production
+#  Platform Layer - AF-South-1 Production
 # EKS CLUSTER AND PLATFORM SERVICES
 # Consumes foundation layer outputs to deploy EKS cluster
 
@@ -42,7 +42,7 @@ provider "aws" {
   }
 }
 
-# 📊 DATA SOURCES - Foundation Layer Outputs
+# DATA SOURCES - Foundation Layer Outputs
 data "terraform_remote_state" "foundation" {
   backend = "s3"
   config = {
@@ -52,7 +52,7 @@ data "terraform_remote_state" "foundation" {
   }
 }
 
-# 🔍 LOCALS - Foundation Layer Data
+#  LOCALS - Foundation Layer Data
 locals {
   # Foundation layer outputs
   vpc_id              = data.terraform_remote_state.foundation.outputs.vpc_id
@@ -66,7 +66,7 @@ locals {
 
 # ☸️ EKS PLATFORM - Using Multi-Region Wrapper Module
 module "eks_platform" {
-  source = "../../../../../modules/eks-platform"
+  source = "../../../../../../../modules/eks-platform"
 
   # Core CPTWN configuration
   project_name = var.project_name
@@ -131,6 +131,19 @@ module "eks_platform" {
     admin = {
       kubernetes_groups = []
       principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+    terraform_user = {
+      kubernetes_groups = []
+      principal_arn     = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/terraform-admin"
 
       policy_associations = {
         admin = {

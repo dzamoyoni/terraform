@@ -1,4 +1,4 @@
-# 📊 Outputs for Client Subnet Isolation Module
+# Outputs for Client Subnet Isolation Module
 
 # Compute Subnet Information
 output "compute_subnet_ids" {

@@ -1,4 +1,4 @@
-# 🔄 Cluster Autoscaler Module
+# Cluster Autoscaler Module
 # Deploys and configures cluster autoscaler for EKS with CPTWN standards
 
 terraform {
@@ -18,11 +18,12 @@ terraform {
   }
 }
 
-# 📊 DATA SOURCES
+# DATA SOURCES
 data "aws_caller_identity" "current" {}
 
-# 🔐 IAM ROLE FOR CLUSTER AUTOSCALER
+# IAM ROLE FOR CLUSTER AUTOSCALER (conditional creation)
 resource "aws_iam_role" "cluster_autoscaler" {
+  count = var.external_irsa_role_arn == null ? 1 : 0
   name = "${var.cluster_name}-cluster-autoscaler-role"
   
   assume_role_policy = jsonencode({
@@ -36,7 +37,10 @@ resource "aws_iam_role" "cluster_autoscaler" {
         }
         Condition = {
           StringEquals = {
-            "${replace(var.oidc_provider_arn, "/^(.*provider/)/", "")}:sub" = "system:serviceaccount:kube-system:${var.service_account_name}"
+            "${replace(var.oidc_provider_arn, "/^(.*provider/)/", "")}:sub" = [
+              "system:serviceaccount:kube-system:${var.service_account_name}",
+              "system:serviceaccount:kube-system:cluster-autoscaler-aws-cluster-autoscaler"
+            ]
             "${replace(var.oidc_provider_arn, "/^(.*provider/)/", "")}:aud" = "sts.amazonaws.com"
           }
         }
@@ -50,8 +54,9 @@ resource "aws_iam_role" "cluster_autoscaler" {
   })
 }
 
-# 📋 IAM POLICY FOR CLUSTER AUTOSCALER
+# IAM POLICY FOR CLUSTER AUTOSCALER (conditional creation)
 resource "aws_iam_policy" "cluster_autoscaler" {
+  count       = var.external_irsa_role_arn == null ? 1 : 0
   name        = "${var.cluster_name}-cluster-autoscaler-policy"
   description = "Policy for cluster autoscaler to manage ASG scaling"
   
@@ -96,20 +101,26 @@ resource "aws_iam_policy" "cluster_autoscaler" {
   })
 }
 
-# 🔗 ATTACH POLICY TO ROLE
+#  ATTACH POLICY TO ROLE (conditional)
 resource "aws_iam_role_policy_attachment" "cluster_autoscaler" {
-  policy_arn = aws_iam_policy.cluster_autoscaler.arn
-  role       = aws_iam_role.cluster_autoscaler.name
+  count      = var.external_irsa_role_arn == null ? 1 : 0
+  policy_arn = aws_iam_policy.cluster_autoscaler[0].arn
+  role       = aws_iam_role.cluster_autoscaler[0].name
 }
 
-# 🔧 KUBERNETES SERVICE ACCOUNT
+# Local to determine the role ARN to use
+locals {
+  cluster_autoscaler_role_arn = var.external_irsa_role_arn != null ? var.external_irsa_role_arn : aws_iam_role.cluster_autoscaler[0].arn
+}
+
+# KUBERNETES SERVICE ACCOUNT
 resource "kubernetes_service_account" "cluster_autoscaler" {
   metadata {
     name      = var.service_account_name
     namespace = "kube-system"
     
     annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.cluster_autoscaler.arn
+      "eks.amazonaws.com/role-arn" = local.cluster_autoscaler_role_arn
     }
     
     labels = {
@@ -121,7 +132,32 @@ resource "kubernetes_service_account" "cluster_autoscaler" {
   }
 }
 
-# 🎡 HELM RELEASE FOR CLUSTER AUTOSCALER
+# MANAGE THE SERVICE ACCOUNT THAT THE HELM CHART CREATES
+# Some versions of the cluster-autoscaler chart create their own service account
+# even when serviceAccount.create=false. This resource manages that.
+resource "kubernetes_service_account" "cluster_autoscaler_chart" {
+  count = var.manage_chart_service_account ? 1 : 0
+  
+  metadata {
+    name      = "cluster-autoscaler-aws-cluster-autoscaler"
+    namespace = "kube-system"
+    
+    annotations = {
+      "eks.amazonaws.com/role-arn" = local.cluster_autoscaler_role_arn
+    }
+    
+    labels = {
+      "app.kubernetes.io/name"       = "aws-cluster-autoscaler"
+      "app.kubernetes.io/component"  = "controller"
+      "app.kubernetes.io/part-of"    = var.cluster_name
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+  
+  depends_on = [helm_release.cluster_autoscaler]
+}
+
+#  HELM RELEASE FOR CLUSTER AUTOSCALER
 resource "helm_release" "cluster_autoscaler" {
   name       = "cluster-autoscaler"
   repository = "https://kubernetes.github.io/autoscaler"
@@ -185,7 +221,7 @@ resource "helm_release" "cluster_autoscaler" {
   
   set {
     name  = "resources.limits.cpu"
-    value = "100m"
+    value = "200m"
   }
   
   set {

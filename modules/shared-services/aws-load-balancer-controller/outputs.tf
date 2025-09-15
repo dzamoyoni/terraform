@@ -2,7 +2,7 @@
 
 output "iam_role_arn" {
   description = "ARN of the AWS Load Balancer Controller IAM role"
-  value       = aws_iam_role.aws_load_balancer_controller.arn
+  value       = var.external_irsa_role_arn != null ? var.external_irsa_role_arn : aws_iam_role.aws_load_balancer_controller[0].arn
 }
 
 output "service_account_name" {

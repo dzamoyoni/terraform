@@ -1,4 +1,4 @@
-# 📝 Variables for VPC Foundation Module
+# Variables for VPC Foundation Module
 
 variable "project_name" {
   description = "Name of the project for resource naming"

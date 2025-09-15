@@ -7,7 +7,7 @@
 
 # 🇿🇦 MTN GHANA PRODUCTION DATABASE - HA Setup
 module "mtn_ghana_database" {
-  source = "../../../../../modules/postgres-ec2"
+  source = "../../../../../../../modules/postgres-ec2"
 
   # Client identification
   client_name = "mtn-ghana-prod"
@@ -88,7 +88,7 @@ module "mtn_ghana_database" {
 
 # 🇲🇬 ORANGE MADAGASCAR PRODUCTION DATABASE - HA Setup  
 module "orange_madagascar_database" {
-  source = "../../../../../modules/postgres-ec2"
+  source = "../../../../../../../modules/postgres-ec2"
 
   # Client identification
   client_name = "orange-madagascar-prod"

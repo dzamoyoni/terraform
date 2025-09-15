@@ -1,4 +1,4 @@
-# 📝 Variables for Client Subnet Isolation Module
+# Variables for Client Subnet Isolation Module
 
 variable "enabled" {
   description = "Whether to create client subnets"

@@ -1,7 +1,8 @@
-# 🎯 AWS Load Balancer Controller Module
+#  AWS Load Balancer Controller Module
 
-# IAM Role for AWS Load Balancer Controller
+# IAM Role for AWS Load Balancer Controller (conditional creation)
 resource "aws_iam_role" "aws_load_balancer_controller" {
+  count = var.external_irsa_role_arn == null ? 1 : 0
   name = "${var.cluster_name}-aws-load-balancer-controller-role"
   
   assume_role_policy = jsonencode({
@@ -29,8 +30,9 @@ resource "aws_iam_role" "aws_load_balancer_controller" {
   })
 }
 
-# IAM Policy for AWS Load Balancer Controller
+# IAM Policy for AWS Load Balancer Controller (conditional creation)
 resource "aws_iam_policy" "aws_load_balancer_controller" {
+  count = var.external_irsa_role_arn == null ? 1 : 0
   name        = "${var.cluster_name}-AWSLoadBalancerControllerPolicy"
   description = "Policy for AWS Load Balancer Controller"
   
@@ -219,10 +221,16 @@ data "aws_iam_policy_document" "aws_load_balancer_controller" {
   }
 }
 
-# Attach policy to role
+# Attach policy to role (conditional)
 resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
-  policy_arn = aws_iam_policy.aws_load_balancer_controller.arn
-  role       = aws_iam_role.aws_load_balancer_controller.name
+  count = var.external_irsa_role_arn == null ? 1 : 0
+  policy_arn = aws_iam_policy.aws_load_balancer_controller[0].arn
+  role       = aws_iam_role.aws_load_balancer_controller[0].name
+}
+
+# Local to determine the role ARN to use
+locals {
+  alb_controller_role_arn = var.external_irsa_role_arn != null ? var.external_irsa_role_arn : aws_iam_role.aws_load_balancer_controller[0].arn
 }
 
 # Kubernetes service account
@@ -232,7 +240,7 @@ resource "kubernetes_service_account" "aws_load_balancer_controller" {
     namespace = "kube-system"
     
     annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.aws_load_balancer_controller.arn
+      "eks.amazonaws.com/role-arn" = local.alb_controller_role_arn
     }
     
     labels = {
@@ -277,8 +285,28 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = var.vpc_id
   }
   
+  # Resource management for better performance and stability
+  set {
+    name  = "resources.requests.cpu"
+    value = "100m"
+  }
+  
+  set {
+    name  = "resources.requests.memory"
+    value = "128Mi"
+  }
+  
+  set {
+    name  = "resources.limits.cpu"
+    value = "200m"
+  }
+  
+  set {
+    name  = "resources.limits.memory"
+    value = "256Mi"
+  }
+  
   depends_on = [
-    kubernetes_service_account.aws_load_balancer_controller,
-    aws_iam_role_policy_attachment.aws_load_balancer_controller
+    kubernetes_service_account.aws_load_balancer_controller
   ]
 }

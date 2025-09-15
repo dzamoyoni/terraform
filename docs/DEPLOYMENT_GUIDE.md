@@ -1,6 +1,6 @@
 # Infrastructure Deployment & Scaling Guide
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Terraform >= 1.0
@@ -20,7 +20,7 @@ export PROJECT_NAME="cptwn-eks-01"
 export ENVIRONMENT="production"
 ```
 
-## 📋 Deployment Process
+## Deployment Process
 
 ### Phase 1: Backend Setup
 Create the Terraform state backend (one-time setup per region):
@@ -119,7 +119,7 @@ terraform apply
 - Metrics Server
 - Cluster Autoscaler
 
-## 🌍 Multi-Region Deployment
+## Multi-Region Deployment
 
 ### Deploying to US-East-1
 After AF-South-1 is stable, deploy to US-East-1:
@@ -141,7 +141,7 @@ cd providers/aws/regions/us-east-1/backend-setup
 - **Data Replication**: Set up cross-region database replication
 - **Backup Strategy**: Implement cross-region backup storage
 
-## 📈 Scaling Strategies
+## Scaling Strategies
 
 ### Horizontal Scaling
 
@@ -210,7 +210,7 @@ volume_size   = 500           # Increased from 100GB
 volume_iops   = 20000        # Increased IOPS
 ```
 
-## 🔄 Environment Management
+## Environment Management
 
 ### Development Environment
 Create a development environment alongside production:
@@ -236,7 +236,7 @@ terraform apply -var="environment=staging" -var="min_size=1" -var="max_size=3"
 3. **Switch traffic** using load balancer weights
 4. **Decommission old version** after validation
 
-## 🛠️ Maintenance Operations
+## Maintenance Operations
 
 ### Regular Updates
 ```bash
@@ -264,7 +264,7 @@ terraform apply
 - Application certificates managed by cert-manager
 - Database certificates rotated during maintenance windows
 
-## 📊 Monitoring Deployments
+## Monitoring Deployments
 
 ### Key Metrics to Watch
 - **Deployment Success Rate**: > 95%
@@ -286,7 +286,7 @@ terraform plan  # Should show no changes
 - Resource quota exhaustion
 - Security group changes
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 

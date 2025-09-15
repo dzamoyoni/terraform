@@ -93,10 +93,10 @@ output "tempo_release" {
 output "prometheus_release" {
   description = "Prometheus Helm release information"
   value = var.enable_prometheus ? {
-    name      = helm_release.prometheus[0].name
-    namespace = helm_release.prometheus[0].namespace
-    version   = helm_release.prometheus[0].version
-    status    = helm_release.prometheus[0].status
+    name      = helm_release.prometheus_stack[0].name
+    namespace = helm_release.prometheus_stack[0].namespace
+    version   = helm_release.prometheus_stack[0].version
+    status    = helm_release.prometheus_stack[0].status
   } : null
 }
 

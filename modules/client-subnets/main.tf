@@ -1,4 +1,4 @@
-# 🏢 Client Subnet Isolation Module - Perfect Multi-Tenant Separation
+# Client Subnet Isolation Module - Perfect Multi-Tenant Separation
 # Creates isolated subnets per client with dedicated networking
 
 terraform {
@@ -11,7 +11,7 @@ terraform {
   }
 }
 
-# 🏢 STANDALONE COMPUTE SUBNETS - Per Client
+# STANDALONE COMPUTE SUBNETS - Per Client
 resource "aws_subnet" "compute" {
   count = var.enabled ? length(var.availability_zones) : 0
   
@@ -34,7 +34,7 @@ resource "aws_subnet" "compute" {
   # }
 }
 
-# 🗄️ DATABASE SUBNETS - Per Client
+# DATABASE SUBNETS - Per Client
 resource "aws_subnet" "database" {
   count = var.enabled ? length(var.availability_zones) : 0
   
@@ -82,7 +82,7 @@ resource "aws_subnet" "eks" {
   # }
 }
 
-# 📋 CLIENT ROUTE TABLES - Isolated per Client and AZ
+# CLIENT ROUTE TABLES - Isolated per Client and AZ
 resource "aws_route_table" "client" {
   count = var.enabled ? length(var.availability_zones) : 0
   
@@ -115,7 +115,7 @@ resource "aws_route_table" "client" {
   # }
 }
 
-# 📋 ROUTE TABLE ASSOCIATIONS - Compute Subnets
+# ROUTE TABLE ASSOCIATIONS - Compute Subnets
 resource "aws_route_table_association" "compute" {
   count = var.enabled ? length(aws_subnet.compute) : 0
   
@@ -127,7 +127,7 @@ resource "aws_route_table_association" "compute" {
   # }
 }
 
-# 📋 ROUTE TABLE ASSOCIATIONS - Database Subnets
+# ROUTE TABLE ASSOCIATIONS - Database Subnets
 resource "aws_route_table_association" "database" {
   count = var.enabled ? length(aws_subnet.database) : 0
   
@@ -139,7 +139,7 @@ resource "aws_route_table_association" "database" {
   # }
 }
 
-# 📋 ROUTE TABLE ASSOCIATIONS - EKS Subnets
+# ROUTE TABLE ASSOCIATIONS - EKS Subnets
 resource "aws_route_table_association" "eks" {
   count = var.enabled ? length(aws_subnet.eks) : 0
   
@@ -151,7 +151,7 @@ resource "aws_route_table_association" "eks" {
   # }
 }
 
-# 🔐 CLIENT-SPECIFIC SECURITY GROUPS
+# CLIENT-SPECIFIC SECURITY GROUPS
 
 # Compute Layer Security Group
 resource "aws_security_group" "compute" {
@@ -359,7 +359,7 @@ resource "aws_security_group" "eks" {
   # }
 }
 
-# 🛡️ NETWORK ACCESS CONTROL LISTS - Additional Security Layer
+#  NETWORK ACCESS CONTROL LISTS - Additional Security Layer
 resource "aws_network_acl" "client" {
   count = var.enabled ? 1 : 0
   

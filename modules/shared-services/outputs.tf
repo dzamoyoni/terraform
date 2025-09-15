@@ -12,5 +12,5 @@ output "aws_load_balancer_controller_service_account_arn" {
 
 output "external_dns_service_account_arn" {
   description = "ARN of the external DNS service account"
-  value       = local.external_dns_iam_role_arn
+  value       = var.enable_external_dns ? module.external_dns[0].iam_role_arn : null
 }

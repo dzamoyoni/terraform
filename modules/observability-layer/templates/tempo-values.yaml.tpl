@@ -48,6 +48,7 @@ config: |
       backend: s3
       s3:
         bucket: ${s3_bucket_name}
+        endpoint: s3.${region}.amazonaws.com
         region: ${region}
         # Use IRSA for authentication - no need for access keys
       pool:
@@ -85,7 +86,7 @@ resources:
 persistence:
   enabled: true
   size: 10Gi
-  storageClassName: gp3
+  storageClassName: gp2
   accessModes:
     - ReadWriteOnce
 

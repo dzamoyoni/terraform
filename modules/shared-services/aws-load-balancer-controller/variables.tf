@@ -25,10 +25,6 @@ variable "oidc_provider_arn" {
   type        = string
 }
 
-variable "oidc_provider_id" {
-  description = "ID of the OIDC provider"
-  type        = string
-}
 
 variable "helm_chart_version" {
   description = "Version of the Helm chart"
@@ -38,6 +34,12 @@ variable "helm_chart_version" {
 variable "service_account_name" {
   description = "Name of the service account"
   type        = string
+}
+
+variable "external_irsa_role_arn" {
+  description = "External IRSA role ARN. If provided, the module will use this instead of creating its own IRSA role."
+  type        = string
+  default     = null
 }
 
 variable "tags" {

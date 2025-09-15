@@ -1,15 +1,15 @@
 # Multi-Cloud Terraform Infrastructure
 
-🌍 **Enterprise-grade multi-cloud infrastructure** built with Terraform for scalable, resilient, and cost-effective cloud deployments.
+**Enterprise-grade multi-cloud infrastructure** built with Terraform for scalable, resilient, and cost-effective cloud deployments.
 
-## 🚀 Quick Start for New Team Members
+## Quick Start for New Team Members
 
-1. **[📖 Team Onboarding Guide](docs/TEAM_ONBOARDING.md)** - Complete setup and your first deployment
-2. **[🎯 Multi-Cloud Strategy](docs/MULTI_CLOUD_STRATEGY.md)** - Understand our architectural approach  
-3. **[📋 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - How to deploy and scale infrastructure
-4. **[💰 FinOps & Cost Management](docs/FINOPS_COST_MANAGEMENT.md)** - Cost optimization strategies
+1. **[ Team Onboarding Guide](docs/TEAM_ONBOARDING.md)** - Complete setup and your first deployment
+2. **[ Multi-Cloud Strategy](docs/MULTI_CLOUD_STRATEGY.md)** - Understand our architectural approach  
+3. **[ Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - How to deploy and scale infrastructure
+4. **[ FinOps & Cost Management](docs/FINOPS_COST_MANAGEMENT.md)** - Cost optimization strategies
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 Our infrastructure follows a **provider-centric, multi-cloud architecture**:
 
@@ -32,21 +32,12 @@ terraform/
 
 Each region deploys infrastructure in logical layers:
 
-1. **🏢 Backend Setup** - Terraform state management (S3 + DynamoDB)
-2. **🌐 Foundation (01)** - VPC, subnets, security groups, VPN
-3. **☸️ Platform (02)** - EKS clusters, node groups, service accounts
-4. **🗄️ Databases (03)** - PostgreSQL instances, backup systems
-5. **📊 Observability (03.5)** - Monitoring, logging, distributed tracing
-6. **🔧 Shared Services (06)** - Load balancers, DNS, cluster services
-
-## 🌍 Current Deployments
-
-### Production Infrastructure
-
-| Region | Status | Purpose | Cluster | Nodes |
-|--------|--------|---------|---------|-------|
-| **af-south-1** (Cape Town) | ✅ Active | Primary | `cptwn-eks-01` | 4 |
-| **us-east-1** (N. Virginia) | ✅ Active | Secondary | `us-east-1-cluster-01` | 4 |
+1. **Backend Setup** - Terraform state management (S3 + DynamoDB)
+2. **Foundation (01)** - VPC, subnets, security groups, VPN
+3. **Platform (02)** - EKS clusters, node groups, service accounts
+4. **Databases (03)** - PostgreSQL instances, backup systems
+5. **Observability (03.5)** - Monitoring, logging, distributed tracing
+6. **Shared Services (06)** - Load balancers, DNS, cluster services
 
 ### Multi-Cloud Roadmap
 
@@ -55,45 +46,35 @@ Each region deploys infrastructure in logical layers:
 - **Q3**: Azure integration (westeurope)
 - **Q4**: Advanced cross-cloud orchestration
 
-## 💡 Key Features
+## Key Features
 
-### ✅ **Multi-Cloud Ready**
+### **Multi-Cloud Ready**
 - Consistent architecture across AWS, GCP, Azure
 - Provider-agnostic modules for portability
 - Unified cost management and governance
 
-### ✅ **Enterprise Security**
+### **Enterprise Security**
 - Zero-trust network architecture
 - IRSA for Kubernetes service accounts
 - Comprehensive resource tagging
 - Automated compliance checking
 
-### ✅ **Cost Optimized**
+### **Cost Optimized**
 - Right-sizing automation
 - Reserved instance recommendations
 - Cross-cloud cost arbitrage
 - Real-time budget monitoring
 
-### ✅ **Highly Available**
+### **Highly Available**
 - Multi-AZ deployments
 - Cross-region backup strategy
 - Auto-scaling based on demand
 - 99.9% uptime SLA
 
-## 📊 Infrastructure Metrics
-
-### Current Scale
-- **Total Resources**: 150+ managed by Terraform
-- **Monthly Cost**: ~$3,500 across all regions
-- **Utilization**: 75% average across compute resources
-- **Availability**: 99.95% uptime last 3 months
-
 ### Client Isolation
 - **MTN Ghana**: Dedicated subnets, node groups, databases
 - **Orange Madagascar**: Isolated infrastructure stack
 - **Ezra Fintech**: Production-grade separation
-
-## 🛡️ Governance & Compliance
 
 ### Resource Tagging Strategy
 All resources include mandatory tags:
@@ -142,7 +123,7 @@ terraform plan -var="desired_size=6"  # Scale from 4 to 6 nodes
 terraform apply
 ```
 
-## 🔍 Monitoring & Observability
+## Monitoring & Observability
 
 ### Dashboards
 - **Grafana**: Real-time infrastructure metrics
@@ -156,7 +137,7 @@ terraform apply
 - Security group changes
 - High resource utilization (>80%)
 
-## 🤝 Contributing
+## Contributing
 
 ### Development Workflow
 1. **Feature Branch**: Create branch for changes
@@ -172,7 +153,7 @@ terraform apply
 - Document architectural decisions
 - Test changes in development first
 
-## 📞 Support & Contacts
+## Support & Contacts
 
 - **Platform Team**: `#infrastructure` Slack channel
 - **On-Call**: Available 24/7 for production issues  
@@ -181,7 +162,7 @@ terraform apply
 
 ---
 
-## 🎯 Getting Started
+## Getting Started
 
 **New to the team?** Start with the [Team Onboarding Guide](docs/TEAM_ONBOARDING.md) for complete setup instructions.
 
@@ -191,4 +172,4 @@ terraform apply
 
 ---
 
-**Status**: ✅ Production Ready | **Architecture**: Multi-Cloud | **Team**: Platform Engineering
+**Status**: Production Ready | **Architecture**: Multi-Cloud | **Team**: Platform Engineering

@@ -121,13 +121,6 @@ variable "slack_webhook_url" {
   sensitive   = true
 }
 
-variable "pagerduty_integration_key" {
-  description = "PagerDuty integration key for critical alerts"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
 variable "alert_email" {
   description = "Email address for alert notifications"
   type        = string
@@ -168,4 +161,77 @@ variable "postgres_endpoints" {
       client   = "ezra"
     }
   }
+}
+
+# ============================================================================
+# MISSING PRODUCTION VARIABLES
+# ============================================================================
+
+variable "grafana_admin_password" {
+  description = "Admin password for Grafana (auto-generated if empty)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "prometheus_replicas" {
+  description = "Number of Prometheus replicas for HA"
+  type        = number
+  default     = 2
+}
+
+variable "enable_prometheus_ha" {
+  description = "Enable Prometheus high availability"
+  type        = bool
+  default     = true
+}
+
+variable "prometheus_retention" {
+  description = "Prometheus data retention period"
+  type        = string
+  default     = "30d"
+}
+
+variable "prometheus_retention_size" {
+  description = "Prometheus data retention size"
+  type        = string
+  default     = "25GB"
+}
+
+variable "enable_network_policies" {
+  description = "Enable network policies for security"
+  type        = bool
+  default     = true
+}
+
+variable "enable_pod_security_policies" {
+  description = "Enable pod security policies"
+  type        = bool
+  default     = true
+}
+
+# ============================================================================
+# ALERTMANAGER CONFIGURATION
+# ============================================================================
+
+variable "alertmanager_storage_class" {
+  description = "Storage class for AlertManager persistent volume"
+  type        = string
+  default     = "gp2"
+  validation {
+    condition     = contains(["gp2", "gp3"], var.alertmanager_storage_class)
+    error_message = "AlertManager storage class must be either 'gp2' or 'gp3'."
+  }
+}
+
+variable "alertmanager_replicas" {
+  description = "Number of AlertManager replicas for high availability"
+  type        = number
+  default     = 2
+}
+
+variable "enable_security_context" {
+  description = "Enable security context for pods (runAsNonRoot, etc.)"
+  type        = bool
+  default     = true
 }

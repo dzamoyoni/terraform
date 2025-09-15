@@ -15,7 +15,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.11"
+      version = "~> 2.11"
     }
   }
 }
@@ -64,7 +64,9 @@ module "cluster_autoscaler" {
   
   # IAM configuration
   oidc_provider_arn    = var.oidc_provider_arn
-  oidc_provider_id     = local.oidc_provider_id
+  
+  # External IRSA role ARN (optional)
+  external_irsa_role_arn = var.external_cluster_autoscaler_irsa_role_arn
   
   # Service configuration
   helm_chart_version   = var.cluster_autoscaler_version
@@ -93,7 +95,9 @@ module "aws_load_balancer_controller" {
   
   # IAM configuration
   oidc_provider_arn    = var.oidc_provider_arn
-  oidc_provider_id     = local.oidc_provider_id
+  
+  # External IRSA role ARN (optional)
+  external_irsa_role_arn = var.external_alb_controller_irsa_role_arn
   
   # Service configuration
   helm_chart_version   = var.aws_load_balancer_controller_version
@@ -157,9 +161,29 @@ resource "helm_release" "metrics_server" {
   }
 }
 
-# 🌐 EXTERNAL DNS (Optional - Placeholder for future implementation)
-# This will be implemented when Route 53 DNS zones are configured
-# For now, we just provide a placeholder output
-locals {
-  external_dns_iam_role_arn = var.enable_external_dns ? "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.cluster_name}-external-dns-role" : null
+# 🌐 EXTERNAL DNS
+module "external_dns" {
+  count  = var.enable_external_dns ? 1 : 0
+  source = "./external-dns"
+  
+  # Core configuration
+  cluster_name = var.cluster_name
+  region      = var.region
+  environment = var.environment
+  
+  # IAM configuration
+  oidc_provider_arn = var.oidc_provider_arn
+  oidc_provider_id  = local.oidc_provider_id
+  
+  # External IRSA role ARN (optional)
+  external_irsa_role_arn = var.external_external_dns_irsa_role_arn
+  
+  # Service configuration
+  helm_chart_version   = var.external_dns_version
+  service_account_name = "${local.external_dns_name}-sa"
+  domain_filters      = var.external_dns_domain_filters
+  policy             = var.external_dns_policy
+  
+  # CPTWN standards
+  tags = local.cptwn_tags
 }

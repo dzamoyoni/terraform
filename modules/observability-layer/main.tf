@@ -25,7 +25,31 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.11"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.4"
+    }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = "~> 1.14"
+    }
   }
+}
+
+# ============================================================================
+# EBS CSI Driver Module (Dependency for Storage)
+# ============================================================================
+
+module "ebs_csi_driver" {
+  source = "../ebs-csi-driver"
+  
+  cluster_name                = var.cluster_name
+  node_group_role_names       = var.node_group_role_names
+  create_gp2_storageclass     = true
+  make_gp2_default           = true
+  create_gp3_storageclass     = var.enable_gp3_storage
+  
+  tags = local.common_tags
 }
 
 # ============================================================================
@@ -411,12 +435,13 @@ resource "helm_release" "prometheus_stack" {
   values = [templatefile("${path.module}/templates/prometheus-values.yaml.tpl", {
     cluster_name           = var.cluster_name
     region                = var.region  
-    remote_write_url      = ""
-    remote_write_username = ""
-    remote_write_password = "disabled"
+    remote_write_url      = var.prometheus_remote_write_url
+    remote_write_username = var.prometheus_remote_write_username
+    remote_write_password = var.prometheus_remote_write_password
     tenant_configs        = local.tenant_configs
     storage_size          = var.prometheus_storage_size
     resources             = var.prometheus_resources
+    enable_alertmanager   = var.enable_alertmanager
   })]
 }
 
@@ -443,4 +468,155 @@ resource "helm_release" "kiali" {
   # Signing key now set correctly in template
 
   # depends_on = [helm_release.prometheus_stack]  # Temporarily removed dependency
+}
+
+# ============================================================================
+# PRODUCTION-GRADE GRAFANA DEPLOYMENT
+# ============================================================================
+
+# Generate random password for Grafana admin if not provided
+resource "random_password" "grafana_admin_password" {
+  count   = var.enable_grafana && var.grafana_admin_password == "" ? 1 : 0
+  length  = 16
+  special = true
+}
+
+# Grafana admin credentials secret
+resource "kubernetes_secret" "grafana_admin_secret" {
+  count = var.enable_grafana ? 1 : 0
+  
+  metadata {
+    name      = "grafana-admin-secret"
+    namespace = local.observability_namespace
+  }
+  
+  data = {
+    admin-user = "admin"
+    admin-password = var.grafana_admin_password != "" ? var.grafana_admin_password : random_password.grafana_admin_password[0].result
+  }
+  
+  type = "Opaque"
+}
+
+# Deploy Grafana (temporary or persistent)
+resource "helm_release" "grafana" {
+  count = var.enable_grafana ? 1 : 0
+  
+  name       = "grafana"
+  repository = "https://grafana.github.io/helm-charts"
+  chart      = "grafana"
+  version    = "7.3.7"
+  namespace  = local.observability_namespace
+  timeout    = 300
+  
+  values = [templatefile(
+    var.grafana_temporary_mode ? 
+      "${path.module}/templates/grafana-temp-values.yaml.tpl" : 
+      "${path.module}/templates/grafana-values.yaml.tpl", 
+    {
+      cluster_name = var.cluster_name
+      region      = var.region
+      storage_size = var.grafana_storage_size
+    }
+  )]
+  
+  depends_on = [
+    kubernetes_secret.grafana_admin_secret[0]
+  ]
+}
+
+# ============================================================================
+# PRODUCTION-GRADE ALERTING
+# ============================================================================
+
+# Enhanced Monitoring Rules
+resource "kubectl_manifest" "enhanced_monitoring_rules" {
+  count     = var.enable_enhanced_monitoring ? 1 : 0
+  yaml_body = templatefile("${path.module}/templates/prometheus-rules.yaml.tpl", {
+    monitoring_namespace       = local.observability_namespace
+    enable_postgres_monitoring = var.enable_postgres_monitoring
+  })
+
+  depends_on = [
+    helm_release.prometheus_stack
+  ]
+}
+
+# AlertManager Deployment
+resource "helm_release" "alertmanager" {
+  count      = var.enable_alertmanager ? 1 : 0
+  name       = "alertmanager"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "alertmanager"
+  version    = "1.9.0"
+  namespace  = local.observability_namespace
+  timeout    = 600
+
+  values = [templatefile("${path.module}/templates/alertmanager-values.yaml.tpl", {
+    monitoring_namespace         = local.observability_namespace
+    slack_webhook_url           = var.slack_webhook_url
+    alert_email                 = var.alert_email
+    alertmanager_storage_class  = var.alertmanager_storage_class
+    storage_size                = var.alertmanager_storage_size
+    alertmanager_replicas       = var.alertmanager_replicas
+    enable_security_context     = var.enable_security_context
+    cluster_name                = var.cluster_name
+    region                      = var.region
+  })]
+
+  depends_on = [
+    helm_release.prometheus_stack
+  ]
+}
+
+# ============================================================================
+# NETWORK POLICIES FOR SECURITY
+# ============================================================================
+
+# Network policy for observability namespace
+resource "kubernetes_network_policy" "observability_network_policy" {
+  count = var.enable_network_policies ? 1 : 0
+  
+  metadata {
+    name      = "observability-network-policy"
+    namespace = local.observability_namespace
+  }
+  
+  spec {
+    pod_selector {
+      match_labels = {
+        "app.kubernetes.io/part-of" = "observability-stack"
+      }
+    }
+    
+    policy_types = ["Ingress", "Egress"]
+    
+    ingress {
+      from {
+        namespace_selector {
+          match_labels = {
+            name = local.observability_namespace
+          }
+        }
+      }
+    }
+    
+    egress {
+      to {
+        namespace_selector {
+          match_labels = {
+            name = local.observability_namespace
+          }
+        }
+      }
+    }
+    
+    # Allow egress to AWS services
+    egress {
+      ports {
+        port     = "443"
+        protocol = "TCP"
+      }
+    }
+  }
 }

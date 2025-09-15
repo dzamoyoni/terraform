@@ -2,7 +2,7 @@
 
 output "iam_role_arn" {
   description = "ARN of the cluster autoscaler IAM role"
-  value       = aws_iam_role.cluster_autoscaler.arn
+  value       = local.cluster_autoscaler_role_arn
 }
 
 output "service_account_name" {

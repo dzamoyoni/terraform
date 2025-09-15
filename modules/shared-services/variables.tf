@@ -117,6 +117,62 @@ variable "cluster_autoscaler_skip_nodes_with_local_storage" {
   default     = false
 }
 
+# 🔐 EXTERNAL IRSA ROLE ARNs (Optional)
+# Use these to integrate with standalone IRSA modules for enhanced permissions
+
+variable "external_alb_controller_irsa_role_arn" {
+  description = "External AWS Load Balancer Controller IRSA role ARN. If provided, the module will use this instead of creating its own IRSA role."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.external_alb_controller_irsa_role_arn == null || can(regex("^arn:aws[a-z0-9-]*:iam::", var.external_alb_controller_irsa_role_arn))
+    error_message = "External ALB controller IRSA role ARN must be a valid IAM role ARN."
+  }
+}
+
+variable "external_cluster_autoscaler_irsa_role_arn" {
+  description = "External Cluster Autoscaler IRSA role ARN. If provided, the module will use this instead of creating its own IRSA role."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.external_cluster_autoscaler_irsa_role_arn == null || can(regex("^arn:aws[a-z0-9-]*:iam::", var.external_cluster_autoscaler_irsa_role_arn))
+    error_message = "External cluster autoscaler IRSA role ARN must be a valid IAM role ARN."
+  }
+}
+
+variable "external_external_dns_irsa_role_arn" {
+  description = "External External DNS IRSA role ARN. If provided, the module will use this instead of creating its own IRSA role."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.external_external_dns_irsa_role_arn == null || can(regex("^arn:aws[a-z0-9-]*:iam::", var.external_external_dns_irsa_role_arn))
+    error_message = "External DNS IRSA role ARN must be a valid IAM role ARN."
+  }
+}
+
+# 🌐 EXTERNAL DNS Configuration
+variable "external_dns_version" {
+  description = "Version of External DNS Helm chart"
+  type        = string
+  default     = "1.14.5"
+}
+
+variable "external_dns_domain_filters" {
+  description = "List of domain filters for External DNS"
+  type        = list(string)
+  default     = []
+}
+
+variable "external_dns_policy" {
+  description = "External DNS policy (sync or upsert-only)"
+  type        = string
+  default     = "upsert-only"
+  validation {
+    condition     = contains(["sync", "upsert-only"], var.external_dns_policy)
+    error_message = "External DNS policy must be either 'sync' or 'upsert-only'."
+  }
+}
+
 variable "additional_tags" {
   description = "Additional tags"
   type        = map(string)
