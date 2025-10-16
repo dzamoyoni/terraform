@@ -1,0 +1,214 @@
+# Development Environment Pipeline
+# Triggered on: feature/* branches and pull requests to develop
+image: hashicorp/terraform:1.5.7
+
+definitions:
+  caches:
+    terraform: ~/.terraform.d/plugin-cache
+  services:
+    docker:
+      memory: 2048
+
+  steps:
+    # Security and validation steps
+    - step: &security-scan
+        name: Security Scanning
+        image: bridgecrew/checkov:latest
+        script:
+          - echo "Running security scans..."
+          - checkov -d . --framework terraform --output cli --output junitxml --output-file-path console,checkov-results.xml
+          - pip install tfsec-wrapper
+          - tfsec . --format junit --out tfsec-results.xml
+        artifacts:
+          - checkov-results.xml
+          - tfsec-results.xml
+        after-script:
+          - |
+            if [ $BITBUCKET_EXIT_CODE -ne 0 ]; then
+              echo "❌ Security scan failed. Please fix the issues before proceeding."
+              exit 1
+            fi
+
+    - step: &cost-estimation
+        name: Cost Estimation
+        image: infracost/infracost:ci-0.10
+        script:
+          - echo "Estimating infrastructure costs..."
+          - export INFRACOST_API_KEY=$INFRACOST_API_KEY
+          - infracost breakdown --path=. --format=json --out-file=infracost-base.json
+          - |
+            MONTHLY_COST=$(infracost output --path=infracost-base.json --format=json | jq -r '.totalMonthlyCost')
+            DAILY_LIMIT=200
+            MONTHLY_COST_NUM=$(echo "$MONTHLY_COST" | sed 's/[^0-9.]//g')
+            if (( $(echo "$MONTHLY_COST_NUM > $DAILY_LIMIT" | bc -l) )); then
+              echo "❌ Cost estimate ($MONTHLY_COST/month) exceeds daily limit ($DAILY_LIMIT)"
+              echo "Please review and optimize resource usage"
+              exit 1
+            fi
+            echo "✅ Cost estimate: $MONTHLY_COST/month (within limits)"
+          - infracost output --path=infracost-base.json --format=table
+        artifacts:
+          - infracost-base.json
+
+    - step: &terraform-validate
+        name: Terraform Validation
+        script:
+          - cd providers/aws/regions/af-south-1
+          - terraform --version
+          - echo "Formatting check..."
+          - terraform fmt -check=true -diff=true -recursive
+          - echo "Validation check..."
+          - terraform init -backend=false
+          - terraform validate
+          - echo "✅ Terraform validation passed"
+
+    - step: &terraform-plan
+        name: Terraform Plan (Development)
+        script:
+          - cd providers/aws/regions/af-south-1/layers/01-foundation/development
+          - echo "Initializing Terraform..."
+          - terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-development.hcl
+          - echo "Creating execution plan..."
+          - terraform plan -var="project_name=dev-${BITBUCKET_BUILD_NUMBER}" -out=tfplan
+          - terraform show -json tfplan > plan.json
+          - echo "Plan created successfully"
+        artifacts:
+          - providers/aws/regions/af-south-1/layers/01-foundation/development/tfplan
+          - providers/aws/regions/af-south-1/layers/01-foundation/development/plan.json
+
+    - step: &terraform-apply-dev
+        name: Deploy to Development
+        deployment: development
+        trigger: automatic
+        script:
+          - cd providers/aws/regions/af-south-1/layers/01-foundation/development
+          - terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-development.hcl
+          - echo "Applying Terraform plan..."
+          - terraform apply -auto-approve tfplan
+          - echo "✅ Development deployment completed"
+          - echo "Validating deployment..."
+          - terraform output -json > outputs.json
+          - |
+            # Post-deployment validation
+            VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
+            if [ ! -z "$VPC_ID" ]; then
+              echo "✅ VPC created: $VPC_ID"
+            else
+              echo "❌ VPC validation failed"
+              exit 1
+            fi
+        artifacts:
+          - providers/aws/regions/af-south-1/layers/01-foundation/development/outputs.json
+        after-script:
+          - echo "Development environment ready for testing"
+
+    - step: &integration-tests
+        name: Integration Tests
+        image: amazon/aws-cli:latest
+        script:
+          - echo "Running integration tests..."
+          - |
+            # Test VPC connectivity
+            VPC_ID=$(cat providers/aws/regions/af-south-1/layers/01-foundation/development/outputs.json | jq -r '.vpc_id.value')
+            aws ec2 describe-vpcs --vpc-ids $VPC_ID --region af-south-1
+            
+            # Test subnets
+            aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --region af-south-1
+            
+            # Test security groups
+            aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --region af-south-1
+            
+            echo "✅ All integration tests passed"
+
+    - step: &notify-slack
+        name: Notify Team
+        image: curlimages/curl:latest
+        script:
+          - |
+            if [ "$BITBUCKET_EXIT_CODE" = "0" ]; then
+              STATUS="✅ SUCCESS"
+              COLOR="good"
+            else
+              STATUS="❌ FAILED"
+              COLOR="danger"
+            fi
+            
+            PAYLOAD="{
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"Development Deployment $STATUS\",
+                \"fields\": [
+                  {\"title\": \"Branch\", \"value\": \"$BITBUCKET_BRANCH\", \"short\": true},
+                  {\"title\": \"Commit\", \"value\": \"$BITBUCKET_COMMIT\", \"short\": true},
+                  {\"title\": \"Author\", \"value\": \"$BITBUCKET_REPO_OWNER\", \"short\": true},
+                  {\"title\": \"Build\", \"value\": \"#$BITBUCKET_BUILD_NUMBER\", \"short\": true}
+                ]
+              }]
+            }"
+            
+            curl -X POST -H 'Content-type: application/json' \
+              --data "$PAYLOAD" \
+              $SLACK_WEBHOOK_URL
+
+pipelines:
+  # Feature branches - full development pipeline
+  branches:
+    'feature/*':
+      - step: *security-scan
+      - step: *cost-estimation
+      - step: *terraform-validate
+      - parallel:
+        - step: *terraform-plan
+      - step: *terraform-apply-dev
+      - step: *integration-tests
+      - step: *notify-slack
+
+  # Pull requests to develop - validation only
+  pull-requests:
+    '**':
+      - step: *security-scan
+      - step: *cost-estimation  
+      - step: *terraform-validate
+      - step: *terraform-plan
+      - step:
+          name: Comment on PR
+          image: curlimages/curl:latest
+          script:
+            - |
+              # Post plan results as PR comment
+              PLAN_OUTPUT=$(cat providers/aws/regions/af-south-1/layers/01-foundation/development/plan.json | jq -r '.planned_values')
+              COST_OUTPUT=$(cat infracost-base.json | jq -r '.totalMonthlyCost')
+              
+              COMMENT="## 🔍 Terraform Plan Results
+              
+              ### 📊 Cost Estimate
+              **Monthly Cost**: \$${COST_OUTPUT}
+              
+              ### 🏗️ Infrastructure Changes
+              View the full plan in the pipeline artifacts.
+              
+              ### ✅ Validation Status
+              - Security scan: ✅ Passed
+              - Cost validation: ✅ Passed  
+              - Terraform validation: ✅ Passed
+              "
+              
+              curl -X POST \
+                -H "Authorization: Bearer $BITBUCKET_APP_PASSWORD" \
+                -H "Content-Type: application/json" \
+                -d "{\"content\": {\"raw\": \"$COMMENT\"}}" \
+                "https://api.bitbucket.org/2.0/repositories/$BITBUCKET_REPO_FULL_NAME/pullrequests/$BITBUCKET_PR_ID/comments"
+
+  # Development branch - automated staging preparation  
+  branches:
+    develop:
+      - step: *security-scan
+      - step: *cost-estimation
+      - step: *terraform-validate
+      - step: *terraform-plan
+      - step:
+          name: Prepare for Staging
+          script:
+            - echo "Development branch updated - staging pipeline ready"
+            - echo "Manual approval required for staging deployment"
+      - step: *notify-slack

@@ -100,27 +100,27 @@ output "database_user" {
 
 output "master_data_volume_id" {
   description = "ID of the master instance data volume"
-  value       = module.master_instance.ebs_volume_ids != null ? element(module.master_instance.ebs_volume_ids, 0) : null
+  value       = length(module.master_instance.additional_volume_ids) > 0 ? module.master_instance.additional_volume_ids[0] : null
 }
 
 output "master_wal_volume_id" {
   description = "ID of the master instance WAL volume"
-  value       = module.master_instance.ebs_volume_ids != null ? element(module.master_instance.ebs_volume_ids, 1) : null
+  value       = length(module.master_instance.additional_volume_ids) > 1 ? module.master_instance.additional_volume_ids[1] : null
 }
 
 output "master_backup_volume_id" {
   description = "ID of the master instance backup volume"
-  value       = module.master_instance.ebs_volume_ids != null ? element(module.master_instance.ebs_volume_ids, 2) : null
+  value       = length(module.master_instance.additional_volume_ids) > 2 ? module.master_instance.additional_volume_ids[2] : null
 }
 
 output "replica_data_volume_id" {
   description = "ID of the replica instance data volume"
-  value       = var.enable_replica ? (module.replica_instance[0].ebs_volume_ids != null ? element(module.replica_instance[0].ebs_volume_ids, 0) : null) : null
+  value       = var.enable_replica ? (length(module.replica_instance[0].additional_volume_ids) > 0 ? module.replica_instance[0].additional_volume_ids[0] : null) : null
 }
 
 output "replica_wal_volume_id" {
   description = "ID of the replica instance WAL volume"
-  value       = var.enable_replica ? (module.replica_instance[0].ebs_volume_ids != null ? element(module.replica_instance[0].ebs_volume_ids, 1) : null) : null
+  value       = var.enable_replica ? (length(module.replica_instance[0].additional_volume_ids) > 1 ? module.replica_instance[0].additional_volume_ids[1] : null) : null
 }
 
 # ===================================================================================
@@ -173,10 +173,10 @@ output "high_availability_enabled" {
 output "replication_status" {
   description = "Replication configuration status"
   value = {
-    enabled       = var.enable_replica
-    master_az     = module.master_instance.availability_zone
-    replica_az    = var.enable_replica ? module.replica_instance[0].availability_zone : null
-    cross_az      = var.enable_replica ? (module.master_instance.availability_zone != module.replica_instance[0].availability_zone) : false
+    enabled    = var.enable_replica
+    master_az  = module.master_instance.availability_zone
+    replica_az = var.enable_replica ? module.replica_instance[0].availability_zone : null
+    cross_az   = var.enable_replica ? (module.master_instance.availability_zone != module.replica_instance[0].availability_zone) : false
   }
 }
 

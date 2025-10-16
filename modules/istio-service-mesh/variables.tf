@@ -41,7 +41,7 @@ variable "additional_tags" {
 variable "istio_version" {
   description = "Version of Istio to deploy"
   type        = string
-  default     = "1.27.1"  # Updated to latest stable with ambient improvements
+  default     = "1.27.1" # Updated to latest stable with ambient improvements
 }
 
 variable "mesh_id" {
@@ -173,7 +173,7 @@ variable "ingress_gateway_autoscale_min" {
 }
 
 variable "ingress_gateway_autoscale_max" {
-  description = "Maximum replicas for ingress gateway autoscaling"  
+  description = "Maximum replicas for ingress gateway autoscaling"
   type        = number
   default     = 10
 }
@@ -409,7 +409,7 @@ variable "application_namespaces" {
     tenant         = optional(string)
   }))
   default = {}
-  
+
   validation {
     condition = alltrue([
       for ns_name, ns_config in var.application_namespaces :
@@ -439,7 +439,7 @@ variable "tracing_sampling_rate" {
   description = "Tracing sampling rate (0.0 to 1.0)"
   type        = number
   default     = 0.01
-  
+
   validation {
     condition     = var.tracing_sampling_rate >= 0.0 && var.tracing_sampling_rate <= 1.0
     error_message = "Tracing sampling rate must be between 0.0 and 1.0."

@@ -21,9 +21,9 @@ variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
   default     = "172.16.0.0/16"
-  
+
   validation {
-    condition = can(cidrhost(var.vpc_cidr, 0))
+    condition     = can(cidrhost(var.vpc_cidr, 0))
     error_message = "VPC CIDR must be a valid IPv4 CIDR block."
   }
 }
@@ -31,9 +31,9 @@ variable "vpc_cidr" {
 variable "availability_zones" {
   description = "List of availability zones to use"
   type        = list(string)
-  
+
   validation {
-    condition = length(var.availability_zones) >= 2
+    condition     = length(var.availability_zones) >= 2
     error_message = "At least 2 availability zones are required for high availability."
   }
 }
@@ -55,19 +55,19 @@ variable "client_configs" {
     base_cidr_block = string
     enabled         = bool
   }))
-  
+
   default = {
     ezra = {
-      base_cidr_block = "172.16.4.0/22"  # 4,094 IPs for Ezra
+      base_cidr_block = "172.16.4.0/22" # 4,094 IPs for Ezra
       enabled         = true
     }
     mtn-ghana = {
-      base_cidr_block = "172.16.8.0/22"  # 4,094 IPs for MTN Ghana
+      base_cidr_block = "172.16.8.0/22" # 4,094 IPs for MTN Ghana
       enabled         = true
     }
     future-client = {
       base_cidr_block = "172.16.12.0/22" # 4,094 IPs for future client
-      enabled         = false  # Reserved for future use
+      enabled         = false            # Reserved for future use
     }
   }
 }

@@ -74,13 +74,13 @@ resource "aws_security_group" "database" {
   }
 
   # MySQL access from VPC CIDR
-  ingress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = [local.vpc_cidr_block]
-    description = "Allow MySQL from VPC"
-  }
+  # ingress {
+  #   from_port   = 3306
+  #   to_port     = 3306
+  #   protocol    = "tcp"
+  #   cidr_blocks = [local.vpc_cidr_block]
+  #   description = "Allow MySQL from VPC"
+  # }
 
   # Allow outbound to VPC (for health checks, etc.)
   egress {
@@ -152,20 +152,20 @@ resource "aws_security_group" "alb" {
 locals {
   # Security group IDs (unified from both modes and existing/new)
   eks_cluster_sg_id = (
-    var.create_security_groups ? 
-    aws_security_group.eks_cluster[0].id : 
+    var.create_security_groups ?
+    aws_security_group.eks_cluster[0].id :
     (local.is_import_mode ? var.existing_eks_cluster_sg_id : "")
   )
-  
+
   database_sg_id = (
-    var.create_security_groups ? 
-    aws_security_group.database[0].id : 
+    var.create_security_groups ?
+    aws_security_group.database[0].id :
     (local.is_import_mode ? var.existing_database_sg_id : "")
   )
-  
+
   alb_sg_id = (
-    var.create_security_groups ? 
-    aws_security_group.alb[0].id : 
+    var.create_security_groups ?
+    aws_security_group.alb[0].id :
     (local.is_import_mode ? var.existing_alb_sg_id : "")
   )
 }

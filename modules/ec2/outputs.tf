@@ -105,7 +105,7 @@ output "additional_volume_arns" {
 output "volume_attachments" {
   description = "Map of volume attachments with device names and volume IDs"
   value = {
-    for i, attachment in aws_volume_attachment.additional : 
+    for i, attachment in aws_volume_attachment.additional :
     attachment.device_name => {
       volume_id     = attachment.volume_id
       attachment_id = attachment.id
@@ -214,51 +214,51 @@ output "instance_summary" {
   value = {
     # Instance details
     instance = {
-      id               = aws_instance.main.id
-      arn              = aws_instance.main.arn
-      name             = local.instance_name
-      type             = aws_instance.main.instance_type
-      ami              = aws_instance.main.ami
-      state            = aws_instance.main.instance_state
+      id                = aws_instance.main.id
+      arn               = aws_instance.main.arn
+      name              = local.instance_name
+      type              = aws_instance.main.instance_type
+      ami               = aws_instance.main.ami
+      state             = aws_instance.main.instance_state
       availability_zone = aws_instance.main.availability_zone
     }
-    
+
     # Network details
     network = {
-      vpc_id            = data.aws_vpc.selected.id
-      subnet_id         = aws_instance.main.subnet_id
-      private_ip        = aws_instance.main.private_ip
-      public_ip         = aws_instance.main.public_ip
-      private_dns       = aws_instance.main.private_dns
-      public_dns        = aws_instance.main.public_dns
-      security_groups   = aws_instance.main.vpc_security_group_ids
+      vpc_id          = data.aws_vpc.selected.id
+      subnet_id       = aws_instance.main.subnet_id
+      private_ip      = aws_instance.main.private_ip
+      public_ip       = aws_instance.main.public_ip
+      private_dns     = aws_instance.main.private_dns
+      public_dns      = aws_instance.main.public_dns
+      security_groups = aws_instance.main.vpc_security_group_ids
     }
-    
+
     # Storage details
     storage = {
-      root_volume_id       = aws_instance.main.root_block_device[0].volume_id
-      additional_volumes   = aws_ebs_volume.additional[*].id
-      volume_attachments   = [for attachment in aws_volume_attachment.additional : {
+      root_volume_id     = aws_instance.main.root_block_device[0].volume_id
+      additional_volumes = aws_ebs_volume.additional[*].id
+      volume_attachments = [for attachment in aws_volume_attachment.additional : {
         device_name = attachment.device_name
         volume_id   = attachment.volume_id
       }]
     }
-    
+
     # IAM details
     iam = {
-      role_created           = var.create_iam_role
-      role_name              = var.create_iam_role ? aws_iam_role.instance_role[0].name : null
-      instance_profile_name  = var.create_iam_role ? aws_iam_instance_profile.instance_profile[0].name : var.iam_instance_profile
+      role_created          = var.create_iam_role
+      role_name             = var.create_iam_role ? aws_iam_role.instance_role[0].name : null
+      instance_profile_name = var.create_iam_role ? aws_iam_instance_profile.instance_profile[0].name : var.iam_instance_profile
     }
-    
+
     # Configuration
     configuration = {
-      monitoring_enabled         = aws_instance.main.monitoring
-      ebs_optimized             = aws_instance.main.ebs_optimized
-      disable_api_termination   = aws_instance.main.disable_api_termination
-      key_name                  = aws_instance.main.key_name
-      service_type              = var.service_type
-      client_name               = var.client_name
+      monitoring_enabled      = aws_instance.main.monitoring
+      ebs_optimized           = aws_instance.main.ebs_optimized
+      disable_api_termination = aws_instance.main.disable_api_termination
+      key_name                = aws_instance.main.key_name
+      service_type            = var.service_type
+      client_name             = var.client_name
     }
   }
 }

@@ -42,13 +42,13 @@ terraform {
 
 module "ebs_csi_driver" {
   source = "../ebs-csi-driver"
-  
-  cluster_name                = var.cluster_name
-  node_group_role_names       = var.node_group_role_names
-  create_gp2_storageclass     = true
-  make_gp2_default           = true
-  create_gp3_storageclass     = var.enable_gp3_storage
-  
+
+  cluster_name            = var.cluster_name
+  node_group_role_names   = var.node_group_role_names
+  create_gp2_storageclass = true
+  make_gp2_default        = true
+  create_gp3_storageclass = var.enable_gp3_storage
+
   tags = local.common_tags
 }
 
@@ -72,7 +72,7 @@ locals {
   # S3 bucket naming
   logs_bucket_name   = "${var.project_name}-${var.region}-logs-${var.environment}"
   traces_bucket_name = "${var.project_name}-${var.region}-traces-${var.environment}"
-  
+
   # Service account names
   fluent_bit_sa_name = "fluent-bit"
   tempo_sa_name      = "tempo"
@@ -105,101 +105,141 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 # ============================================================================
-# S3 Buckets for Logs and Traces
+# S3 Buckets for Logs and Traces - Using Standardized S3 Management
 # ============================================================================
 
-# Logs S3 Bucket
-resource "aws_s3_bucket" "logs" {
-  bucket = local.logs_bucket_name
-  tags   = merge(local.common_tags, {
+# Logs S3 Bucket - Using CPTWN S3 Management Module
+module "logs_bucket" {
+  source = "../s3-bucket-management"
+
+  # Core configuration
+  project_name   = var.project_name
+  environment    = var.environment
+  region         = var.region
+  bucket_purpose = "logs"
+
+  # Custom naming to maintain compatibility
+  custom_bucket_name = local.logs_bucket_name
+
+  # Logs-specific configuration with structured keys
+  logs_retention_days        = var.logs_retention_days
+  enable_intelligent_tiering = var.enable_intelligent_tiering
+  enable_cost_metrics        = true
+  enable_structured_keys     = true
+
+  # Custom key patterns for logs
+  custom_key_patterns = {
+    logs = {
+      enabled    = true
+      pattern    = "logs/cluster=$${cluster_name}/tenant=$${tenant}/service=$${service}/year=%Y/month=%m/day=%d/hour=%H/fluent-bit-logs-%Y%m%d-%H%M%S-$$UUID.gz"
+      partitions = ["cluster_name", "tenant", "service", "year", "month", "day", "hour"]
+    }
+  }
+
+  # Advanced lifecycle patterns for log data
+  lifecycle_key_patterns = {
+    hot_logs = {
+      enabled       = true
+      filter_prefix = "logs/"
+      transitions = [
+        {
+          days          = 7
+          storage_class = "STANDARD_IA"
+        },
+        {
+          days          = 30
+          storage_class = "GLACIER"
+        }
+      ]
+      expiration_days = var.logs_retention_days
+    }
+  }
+
+  # Security configuration
+  enable_versioning = true
+  kms_key_id        = var.logs_kms_key_id
+
+  # Cross-region replication for disaster recovery
+  enable_cross_region_replication    = var.enable_cross_region_replication
+  replication_destination_bucket_arn = var.logs_replication_bucket_arn
+
+  # Monitoring and notifications
+  enable_bucket_notifications = var.enable_bucket_monitoring
+  enable_eventbridge          = var.enable_bucket_monitoring
+  notification_topics         = var.logs_notification_topics
+
+  # Standard tags
+  common_tags = merge(local.common_tags, {
     Purpose = "Application and Infrastructure Logs"
     Type    = "Logs"
   })
 }
 
-resource "aws_s3_bucket_versioning" "logs" {
-  bucket = aws_s3_bucket.logs.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
+# Traces S3 Bucket - Using CPTWN S3 Management Module  
+module "traces_bucket" {
+  source = "../s3-bucket-management"
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
-  bucket = aws_s3_bucket.logs.id
+  # Core configuration
+  project_name   = var.project_name
+  environment    = var.environment
+  region         = var.region
+  bucket_purpose = "traces"
 
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+  # Custom naming to maintain compatibility
+  custom_bucket_name = local.traces_bucket_name
+
+  # Traces-specific configuration with structured keys
+  traces_retention_days      = var.traces_retention_days
+  enable_intelligent_tiering = var.enable_intelligent_tiering
+  enable_cost_metrics        = true
+  enable_structured_keys     = true
+
+  # Custom key patterns for traces
+  custom_key_patterns = {
+    traces = {
+      enabled    = true
+      pattern    = "traces/cluster=$${cluster_name}/tenant=$${tenant}/service=$${service}/year=%Y/month=%m/day=%d/hour=%H/tempo-traces-%Y%m%d-%H%M%S-$$UUID.gz"
+      partitions = ["cluster_name", "tenant", "service", "year", "month", "day", "hour"]
     }
   }
-}
 
-resource "aws_s3_bucket_lifecycle_configuration" "logs" {
-  bucket = aws_s3_bucket.logs.id
-
-  rule {
-    id     = "log_lifecycle"
-    status = "Enabled"
-
-    filter {
-      prefix = ""
-    }
-
-    expiration {
-      days = var.logs_retention_days
-    }
-
-    noncurrent_version_expiration {
-      noncurrent_days = 7
+  # Advanced lifecycle patterns for trace data  
+  lifecycle_key_patterns = {
+    hot_traces = {
+      enabled       = true
+      filter_prefix = "traces/"
+      transitions = [
+        {
+          days          = 7
+          storage_class = "STANDARD_IA"
+        },
+        {
+          days          = 30
+          storage_class = "GLACIER"
+        }
+      ]
+      expiration_days = var.traces_retention_days
     }
   }
-}
 
-# Traces S3 Bucket
-resource "aws_s3_bucket" "traces" {
-  bucket = local.traces_bucket_name
-  tags   = merge(local.common_tags, {
+  # Security configuration
+  enable_versioning = true
+  kms_key_id        = var.traces_kms_key_id
+
+  # Cross-region replication for disaster recovery
+  enable_cross_region_replication    = var.enable_cross_region_replication
+  replication_destination_bucket_arn = var.traces_replication_bucket_arn
+
+  # Monitoring and notifications
+  enable_bucket_notifications = var.enable_bucket_monitoring
+  enable_eventbridge          = var.enable_bucket_monitoring
+  notification_topics         = var.traces_notification_topics
+
+  # Standard tags
+  common_tags = merge(local.common_tags, {
     Purpose = "Distributed Traces"
     Type    = "Traces"
   })
-}
-
-resource "aws_s3_bucket_versioning" "traces" {
-  bucket = aws_s3_bucket.traces.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "traces" {
-  bucket = aws_s3_bucket.traces.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "traces" {
-  bucket = aws_s3_bucket.traces.id
-
-  rule {
-    id     = "traces_lifecycle"
-    status = "Enabled"
-
-    filter {
-      prefix = ""
-    }
-
-    expiration {
-      days = var.traces_retention_days
-    }
-
-    noncurrent_version_expiration {
-      noncurrent_days = 7
-    }
-  }
 }
 
 # ============================================================================
@@ -223,8 +263,8 @@ resource "aws_iam_policy" "fluent_bit_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.logs.arn,
-          "${aws_s3_bucket.logs.arn}/*"
+          module.logs_bucket.bucket_arn,
+          "${module.logs_bucket.bucket_arn}/*"
         ]
       },
       {
@@ -244,7 +284,7 @@ resource "aws_iam_policy" "fluent_bit_policy" {
 
 # Fluent Bit IAM Role
 module "fluent_bit_irsa" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.0"
 
   role_name = "${var.project_name}-${var.region}-fluent-bit-role"
@@ -280,8 +320,8 @@ resource "aws_iam_policy" "tempo_policy" {
           "s3:GetBucketLocation"
         ]
         Resource = [
-          aws_s3_bucket.traces.arn,
-          "${aws_s3_bucket.traces.arn}/*"
+          module.traces_bucket.bucket_arn,
+          "${module.traces_bucket.bucket_arn}/*"
         ]
       }
     ]
@@ -292,7 +332,7 @@ resource "aws_iam_policy" "tempo_policy" {
 
 # Tempo IAM Role
 module "tempo_irsa" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.0"
 
   role_name = "${var.project_name}-${var.region}-tempo-role"
@@ -326,16 +366,16 @@ resource "kubernetes_config_map" "fluent_bit_config" {
 
   data = {
     "fluent-bit.conf" = templatefile("${path.module}/templates/fluent-bit.conf.tpl", {
-      cluster_name    = var.cluster_name
-      region          = var.region
-      s3_bucket_name  = aws_s3_bucket.logs.bucket
-      tenant_configs  = local.tenant_configs
+      cluster_name   = var.cluster_name
+      region         = var.region
+      s3_bucket_name = module.logs_bucket.bucket_id
+      tenant_configs = local.tenant_configs
     })
-    
+
     "parsers.conf" = file("${path.module}/templates/parsers.conf")
   }
 
-  depends_on = [aws_s3_bucket.logs]
+  depends_on = [module.logs_bucket]
 }
 
 # Create Service Account for Fluent Bit
@@ -380,13 +420,13 @@ resource "helm_release" "fluent_bit" {
   version    = var.fluent_bit_chart_version
   namespace  = local.observability_namespace
 
-  values = [templatefile("${path.module}/templates/fluent-bit-values.yaml.tpl", {
+  values = [templatefile("${path.module}/templates/fluent-bit-values-enhanced.yaml.tpl", {
     service_account_name = kubernetes_service_account.fluent_bit.metadata[0].name
-    cluster_name        = var.cluster_name
-    region              = var.region
-    s3_bucket_name      = aws_s3_bucket.logs.bucket
-    image_tag           = var.fluent_bit_image_tag
-    resources           = var.fluent_bit_resources
+    cluster_name         = var.cluster_name
+    region               = var.region
+    s3_bucket_name       = module.logs_bucket.bucket_id
+    image_tag            = var.fluent_bit_image_tag
+    resources            = var.fluent_bit_resources
   })]
 
   depends_on = [
@@ -408,10 +448,10 @@ resource "helm_release" "tempo" {
 
   values = [templatefile("${path.module}/templates/tempo-values.yaml.tpl", {
     service_account_name = kubernetes_service_account.tempo.metadata[0].name
-    s3_bucket_name      = aws_s3_bucket.traces.bucket
-    region              = var.region
-    cluster_name        = var.cluster_name
-    resources           = var.tempo_resources
+    s3_bucket_name       = module.traces_bucket.bucket_id
+    region               = var.region
+    cluster_name         = var.cluster_name
+    resources            = var.tempo_resources
   })]
 
   depends_on = [
@@ -433,8 +473,8 @@ resource "helm_release" "prometheus_stack" {
   wait       = true
 
   values = [templatefile("${path.module}/templates/prometheus-values.yaml.tpl", {
-    cluster_name           = var.cluster_name
-    region                = var.region  
+    cluster_name          = var.cluster_name
+    region                = var.region
     remote_write_url      = var.prometheus_remote_write_url
     remote_write_username = var.prometheus_remote_write_username
     remote_write_password = var.prometheus_remote_write_password
@@ -459,12 +499,12 @@ resource "helm_release" "kiali" {
   namespace  = local.observability_namespace
 
   values = [templatefile("${path.module}/templates/kiali-values.yaml.tpl", {
-    cluster_name = var.cluster_name
-    region      = var.region
-    auth_strategy = var.kiali_auth_strategy
+    cluster_name   = var.cluster_name
+    region         = var.region
+    auth_strategy  = var.kiali_auth_strategy
     prometheus_url = var.enable_prometheus ? "http://prometheus-kube-prometheus-prometheus:9090" : var.external_prometheus_url
   })]
-  
+
   # Signing key now set correctly in template
 
   # depends_on = [helm_release.prometheus_stack]  # Temporarily removed dependency
@@ -484,42 +524,42 @@ resource "random_password" "grafana_admin_password" {
 # Grafana admin credentials secret
 resource "kubernetes_secret" "grafana_admin_secret" {
   count = var.enable_grafana ? 1 : 0
-  
+
   metadata {
     name      = "grafana-admin-secret"
     namespace = local.observability_namespace
   }
-  
+
   data = {
-    admin-user = "admin"
+    admin-user     = "admin"
     admin-password = var.grafana_admin_password != "" ? var.grafana_admin_password : random_password.grafana_admin_password[0].result
   }
-  
+
   type = "Opaque"
 }
 
 # Deploy Grafana (temporary or persistent)
 resource "helm_release" "grafana" {
   count = var.enable_grafana ? 1 : 0
-  
+
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
   version    = "7.3.7"
   namespace  = local.observability_namespace
   timeout    = 300
-  
+
   values = [templatefile(
-    var.grafana_temporary_mode ? 
-      "${path.module}/templates/grafana-temp-values.yaml.tpl" : 
-      "${path.module}/templates/grafana-values.yaml.tpl", 
+    var.grafana_temporary_mode ?
+    "${path.module}/templates/grafana-temp-values.yaml.tpl" :
+    "${path.module}/templates/grafana-values.yaml.tpl",
     {
       cluster_name = var.cluster_name
-      region      = var.region
+      region       = var.region
       storage_size = var.grafana_storage_size
     }
   )]
-  
+
   depends_on = [
     kubernetes_secret.grafana_admin_secret[0]
   ]
@@ -531,10 +571,34 @@ resource "helm_release" "grafana" {
 
 # Enhanced Monitoring Rules
 resource "kubectl_manifest" "enhanced_monitoring_rules" {
-  count     = var.enable_enhanced_monitoring ? 1 : 0
+  count = var.enable_enhanced_monitoring ? 1 : 0
   yaml_body = templatefile("${path.module}/templates/prometheus-rules.yaml.tpl", {
     monitoring_namespace       = local.observability_namespace
     enable_postgres_monitoring = var.enable_postgres_monitoring
+  })
+
+  depends_on = [
+    helm_release.prometheus_stack
+  ]
+}
+
+# Cluster Autoscaler and DaemonSet Monitoring Rules
+resource "kubectl_manifest" "cluster_autoscaler_monitoring" {
+  count = var.enable_enhanced_monitoring ? 1 : 0
+  yaml_body = templatefile("${path.module}/templates/cluster-autoscaler-monitoring.yaml.tpl", {
+    monitoring_namespace = local.observability_namespace
+  })
+
+  depends_on = [
+    helm_release.prometheus_stack
+  ]
+}
+
+# Resource and Pod Scheduling Monitoring Rules
+resource "kubectl_manifest" "resource_monitoring_rules" {
+  count = 1 # Always enabled - critical for cluster health
+  yaml_body = templatefile("${path.module}/templates/resource-monitoring-rules.yaml.tpl", {
+    monitoring_namespace = local.observability_namespace
   })
 
   depends_on = [
@@ -553,15 +617,15 @@ resource "helm_release" "alertmanager" {
   timeout    = 600
 
   values = [templatefile("${path.module}/templates/alertmanager-values.yaml.tpl", {
-    monitoring_namespace         = local.observability_namespace
-    slack_webhook_url           = var.slack_webhook_url
-    alert_email                 = var.alert_email
-    alertmanager_storage_class  = var.alertmanager_storage_class
-    storage_size                = var.alertmanager_storage_size
-    alertmanager_replicas       = var.alertmanager_replicas
-    enable_security_context     = var.enable_security_context
-    cluster_name                = var.cluster_name
-    region                      = var.region
+    monitoring_namespace       = local.observability_namespace
+    slack_webhook_url          = var.slack_webhook_url
+    alert_email                = var.alert_email
+    alertmanager_storage_class = var.alertmanager_storage_class
+    storage_size               = var.alertmanager_storage_size
+    alertmanager_replicas      = var.alertmanager_replicas
+    enable_security_context    = var.enable_security_context
+    cluster_name               = var.cluster_name
+    region                     = var.region
   })]
 
   depends_on = [
@@ -576,21 +640,21 @@ resource "helm_release" "alertmanager" {
 # Network policy for observability namespace
 resource "kubernetes_network_policy" "observability_network_policy" {
   count = var.enable_network_policies ? 1 : 0
-  
+
   metadata {
     name      = "observability-network-policy"
     namespace = local.observability_namespace
   }
-  
+
   spec {
     pod_selector {
       match_labels = {
         "app.kubernetes.io/part-of" = "observability-stack"
       }
     }
-    
+
     policy_types = ["Ingress", "Egress"]
-    
+
     ingress {
       from {
         namespace_selector {
@@ -600,7 +664,7 @@ resource "kubernetes_network_policy" "observability_network_policy" {
         }
       }
     }
-    
+
     egress {
       to {
         namespace_selector {
@@ -610,7 +674,7 @@ resource "kubernetes_network_policy" "observability_network_policy" {
         }
       }
     }
-    
+
     # Allow egress to AWS services
     egress {
       ports {

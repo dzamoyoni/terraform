@@ -1,9 +1,9 @@
-# CPTWN EKS Cluster Wrapper Module - Variables
-# Standardized inputs for consistent EKS deployments across all CPTWN environments
+# EKS Cluster Wrapper Module - Variables
+# Standardized inputs for consistent EKS deployments across all environments
 
 # CORE CONFIGURATION
 variable "project_name" {
-  description = "CPTWN project name for resource naming"
+  description = "Project name for resource naming"
   type        = string
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.project_name))
@@ -74,33 +74,33 @@ variable "log_retention_days" {
 variable "node_groups" {
   description = "Map of EKS managed node group definitions"
   type = map(object({
-    name_suffix    = string           # Short name for the node group
-    instance_types = list(string)     # EC2 instance types
-    min_size       = number           # Minimum number of nodes
-    max_size       = number           # Maximum number of nodes
-    desired_size   = number           # Desired number of nodes
-    disk_size      = number           # EBS disk size in GB
-    
+    name_suffix    = string       # Short name for the node group
+    instance_types = list(string) # EC2 instance types
+    min_size       = number       # Minimum number of nodes
+    max_size       = number       # Maximum number of nodes
+    desired_size   = number       # Desired number of nodes
+    disk_size      = number       # EBS disk size in GB
+
     # Optional client-specific configuration
-    client  = optional(string, "platform")  # Client identifier
-    purpose = optional(string)               # Node group purpose
-    
+    client  = optional(string, "platform") # Client identifier
+    purpose = optional(string)             # Node group purpose
+
     # Optional custom labels and tags
     labels = optional(map(string), {})
     tags   = optional(map(string), {})
   }))
-  
+
   validation {
     condition = alltrue([
-      for name, ng in var.node_groups : 
+      for name, ng in var.node_groups :
       ng.min_size <= ng.desired_size && ng.desired_size <= ng.max_size
     ])
     error_message = "For each node group: min_size <= desired_size <= max_size."
   }
-  
+
   validation {
     condition = alltrue([
-      for name, ng in var.node_groups : 
+      for name, ng in var.node_groups :
       ng.disk_size >= 20 && ng.disk_size <= 1000
     ])
     error_message = "Disk size must be between 20 and 1000 GB."

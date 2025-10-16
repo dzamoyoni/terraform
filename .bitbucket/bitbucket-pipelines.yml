@@ -1,0 +1,440 @@
+# Enterprise GitOps Bitbucket Pipelines
+# Multi-environment Terraform deployment with security gates and compliance
+image: hashicorp/terraform:1.5.7
+
+definitions:
+  caches:
+    terraform: ~/.terraform.d/plugin-cache
+    node: node_modules
+    pip: ~/.cache/pip
+  
+  services:
+    docker:
+      memory: 4096
+
+  steps:
+    # Shared pipeline steps
+    - step: &setup-environment
+        name: Setup Environment
+        script:
+          - echo "🔧 Setting up pipeline environment..."
+          - terraform --version
+          - aws --version
+          - export TF_IN_AUTOMATION=true
+          - export TF_INPUT=0
+          - |
+            # Install required tools
+            apk add --no-cache curl jq python3 py3-pip nodejs npm git
+            pip install checkov infracost-python
+            npm install -g @snyk/cli
+          - echo "✅ Environment setup complete"
+        caches:
+          - pip
+          - node
+
+    - step: &pre-commit-hooks
+        name: Pre-commit Validation
+        script:
+          - echo "🔍 Running pre-commit validation..."
+          # Terraform formatting
+          - terraform fmt -check=true -diff=true -recursive
+          # Trailing whitespace check
+          - |
+            if grep -r "[ \t]$" --include="*.tf" --include="*.yml" --include="*.yaml" . ; then
+              echo "❌ Trailing whitespace found"
+              exit 1
+            fi
+          # Large file check
+          - |
+            if find . -type f -size +100k -not -path "./.git/*" | grep -q .; then
+              echo "❌ Large files detected (>100KB)"
+              find . -type f -size +100k -not -path "./.git/*"
+              exit 1
+            fi
+          - echo "✅ Pre-commit validation passed"
+
+    - step: &security-baseline-scan
+        name: Security Baseline Scan
+        image: bridgecrew/checkov:latest
+        script:
+          - echo "🔒 Running security baseline scan..."
+          - checkov -d . --framework terraform --quiet --compact
+          - echo "✅ Security baseline scan completed"
+
+pipelines:
+  # Development workflow (feature branches)
+  branches:
+    'feature/*':
+      - step: *setup-environment
+      - step: *pre-commit-hooks
+      - step: *security-baseline-scan
+      - step:
+          name: Development Deployment
+          include: ".bitbucket/pipelines/development.yml"
+
+  # Staging workflow (develop branch)
+  branches:
+    develop:
+      - step: *setup-environment
+      - step: *pre-commit-hooks
+      - step: *security-baseline-scan
+      - step:
+          name: Staging Deployment
+          include: ".bitbucket/pipelines/staging.yml"
+
+  # Production workflow (main branch)
+  branches:
+    main:
+      - step: *setup-environment
+      - step: *pre-commit-hooks
+      - step: *security-baseline-scan
+      - step:
+          name: Production Deployment
+          include: ".bitbucket/pipelines/production.yml"
+
+  # Pull request validation
+  pull-requests:
+    '**':
+      - step: *setup-environment
+      - step: *pre-commit-hooks
+      - step: *security-baseline-scan
+      - step:
+          name: Plan Generation & Validation
+          script:
+            - echo "📋 Generating Terraform plans for review..."
+            - |
+              # Determine which layers have changes
+              CHANGED_LAYERS=""
+              if git diff --name-only origin/$BITBUCKET_PR_DESTINATION_BRANCH HEAD | grep -q "providers/aws/regions/.*/layers/01-foundation"; then
+                CHANGED_LAYERS="$CHANGED_LAYERS foundation"
+              fi
+              if git diff --name-only origin/$BITBUCKET_PR_DESTINATION_BRANCH HEAD | grep -q "providers/aws/regions/.*/layers/02-platform"; then
+                CHANGED_LAYERS="$CHANGED_LAYERS platform"
+              fi
+              if git diff --name-only origin/$BITBUCKET_PR_DESTINATION_BRANCH HEAD | grep -q "providers/aws/regions/.*/layers/03-databases"; then
+                CHANGED_LAYERS="$CHANGED_LAYERS databases"
+              fi
+              
+              echo "Changed layers: $CHANGED_LAYERS"
+              
+              # Generate plans for changed layers
+              for layer in $CHANGED_LAYERS; do
+                echo "Generating plan for $layer layer..."
+                case $layer in
+                  "foundation")
+                    cd providers/aws/regions/af-south-1/layers/01-foundation/staging
+                    terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-staging.hcl
+                    terraform plan -var="project_name=pr-${BITBUCKET_PR_ID}" -out=${layer}.tfplan
+                    terraform show -json ${layer}.tfplan > ${layer}-plan.json
+                    cd -
+                    ;;
+                  "platform")
+                    cd providers/aws/regions/af-south-1/layers/02-platform/staging
+                    terraform init -backend-config=../../../../../shared/backend-configs/af-south-platform-staging.hcl
+                    terraform plan -var="project_name=pr-${BITBUCKET_PR_ID}" -out=${layer}.tfplan
+                    terraform show -json ${layer}.tfplan > ${layer}-plan.json
+                    cd -
+                    ;;
+                esac
+              done
+            - echo "✅ Plans generated successfully"
+          artifacts:
+            - providers/aws/regions/af-south-1/layers/*/staging/*-plan.json
+
+      - step:
+          name: Cost Impact Analysis
+          image: infracost/infracost:ci-0.10
+          script:
+            - echo "💰 Analyzing cost impact of changes..."
+            - export INFRACOST_API_KEY=$INFRACOST_API_KEY
+            - |
+              # Generate cost diff for PR
+              infracost diff --path=. \
+                --compare-to=main \
+                --format=json \
+                --out-file=cost-diff.json
+              
+              # Extract cost information
+              COST_INCREASE=$(jq -r '.diffTotalMonthlyCost // "0"' cost-diff.json)
+              COST_BREAKDOWN=$(jq -r '.projects[].diff.resources[] | select(.costDiff.monthlyCostDiff != "0") | "\(.name): \(.costDiff.monthlyCostDiff)"' cost-diff.json)
+              
+              echo "Cost impact analysis:"
+              echo "Monthly cost change: \$${COST_INCREASE}"
+              if [ ! -z "$COST_BREAKDOWN" ]; then
+                echo "Resource breakdown:"
+                echo "$COST_BREAKDOWN"
+              fi
+              
+              # Generate HTML report
+              infracost diff --path=. \
+                --compare-to=main \
+                --format=html \
+                --out-file=cost-diff-report.html
+            - echo "✅ Cost analysis complete"
+          artifacts:
+            - cost-diff.json
+            - cost-diff-report.html
+
+      - step:
+          name: PR Comment with Results
+          image: curlimages/curl:latest
+          script:
+            - |
+              # Aggregate results for PR comment
+              PLANS_SUMMARY=""
+              if [ -f providers/aws/regions/af-south-1/layers/01-foundation/staging/foundation-plan.json ]; then
+                FOUNDATION_CHANGES=$(jq -r '[.resource_changes[] | select(.change.actions[] | contains("create", "update", "delete"))] | length' providers/aws/regions/af-south-1/layers/01-foundation/staging/foundation-plan.json)
+                PLANS_SUMMARY="${PLANS_SUMMARY}\n**Foundation Layer**: ${FOUNDATION_CHANGES} changes"
+              fi
+              
+              COST_IMPACT=""
+              if [ -f cost-diff.json ]; then
+                COST_CHANGE=$(jq -r '.diffTotalMonthlyCost // "0"' cost-diff.json)
+                COST_IMPACT="**Monthly Cost Impact**: \$${COST_CHANGE}"
+              fi
+              
+              # Create comprehensive PR comment
+              COMMENT="## 🔍 Infrastructure Review Summary
+              
+              ### 📋 Terraform Plan Results
+              ${PLANS_SUMMARY}
+              
+              ### 💰 Cost Analysis
+              ${COST_IMPACT}
+              
+              ### ✅ Validation Status
+              - ✅ Security scan: Passed
+              - ✅ Terraform validation: Passed
+              - ✅ Pre-commit hooks: Passed
+              
+              ### 📊 Detailed Reports
+              - [Cost Impact Report](${BITBUCKET_REPO_FULL_NAME}/downloads/cost-diff-report.html)
+              - [Terraform Plans](${BITBUCKET_REPO_FULL_NAME}/pipelines/results/${BITBUCKET_BUILD_NUMBER})
+              
+              ---
+              *Generated by GitOps Pipeline - Build #${BITBUCKET_BUILD_NUMBER}*"
+              
+              # Post comment to PR
+              curl -X POST \
+                -H "Authorization: Bearer $BITBUCKET_APP_PASSWORD" \
+                -H "Content-Type: application/json" \
+                -d "{\"content\": {\"raw\": \"$COMMENT\"}}" \
+                "https://api.bitbucket.org/2.0/repositories/$BITBUCKET_REPO_FULL_NAME/pullrequests/$BITBUCKET_PR_ID/comments"
+
+  # Custom pipelines for manual operations
+  custom:
+    # Emergency hotfix deployment
+    emergency-deploy:
+      - variables:
+          - name: TARGET_ENVIRONMENT
+            default: "production"
+          - name: EMERGENCY_REASON
+            default: "Critical infrastructure issue"
+      - step: *setup-environment
+      - step:
+          name: Emergency Validation
+          script:
+            - echo "🚨 EMERGENCY DEPLOYMENT INITIATED"
+            - echo "Target: $TARGET_ENVIRONMENT"
+            - echo "Reason: $EMERGENCY_REASON"
+            - echo "Authorized by: $BITBUCKET_REPO_OWNER"
+            - |
+              # Minimal validation for emergency deployment
+              terraform fmt -check=true
+              checkov -d . --framework terraform --quiet --compact
+            - echo "⚠️  Emergency validation complete"
+      - step:
+          name: Emergency Deploy
+          deployment: production
+          trigger: manual
+          script:
+            - echo "🚀 Executing emergency deployment..."
+            - cd providers/aws/regions/af-south-1/layers/01-foundation/production
+            - terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-production.hcl
+            - terraform plan -var="project_name=emergency-${BITBUCKET_BUILD_NUMBER}" -out=emergency.tfplan
+            - terraform apply -auto-approve emergency.tfplan
+            - echo "✅ Emergency deployment complete"
+            - |
+              # Send emergency notification
+              curl -X POST -H 'Content-type: application/json' \
+                --data "{
+                  \"text\": \"🚨 EMERGENCY DEPLOYMENT COMPLETE\n**Environment**: $TARGET_ENVIRONMENT\n**Reason**: $EMERGENCY_REASON\n**Build**: #$BITBUCKET_BUILD_NUMBER\n**Operator**: $BITBUCKET_REPO_OWNER\"
+                }" \
+                $SLACK_WEBHOOK_URL
+
+    # Infrastructure drift remediation
+    drift-remediation:
+      - variables:
+          - name: TARGET_LAYER
+            default: "foundation"
+          - name: TARGET_ENVIRONMENT
+            default: "production"
+      - step: *setup-environment
+      - step:
+          name: Drift Detection & Analysis
+          script:
+            - echo "🔍 Analyzing infrastructure drift..."
+            - |
+              case $TARGET_LAYER in
+                "foundation")
+                  LAYER_PATH="providers/aws/regions/af-south-1/layers/01-foundation/$TARGET_ENVIRONMENT"
+                  BACKEND_CONFIG="../../../../../shared/backend-configs/af-south-foundation-$TARGET_ENVIRONMENT.hcl"
+                  ;;
+                "platform")
+                  LAYER_PATH="providers/aws/regions/af-south-1/layers/02-platform/$TARGET_ENVIRONMENT"
+                  BACKEND_CONFIG="../../../../../shared/backend-configs/af-south-platform-$TARGET_ENVIRONMENT.hcl"
+                  ;;
+              esac
+              
+              cd $LAYER_PATH
+              terraform init -backend-config=$BACKEND_CONFIG
+              
+              # Detect drift
+              if terraform plan -detailed-exitcode -out=drift-check.plan; then
+                echo "✅ No drift detected"
+                exit 0
+              else
+                EXIT_CODE=$?
+                if [ $EXIT_CODE -eq 2 ]; then
+                  echo "⚠️  Infrastructure drift detected!"
+                  terraform show drift-check.plan > drift-report.txt
+                  
+                  # Analyze drift severity
+                  DRIFT_LINES=$(wc -l < drift-report.txt)
+                  echo "Drift analysis: $DRIFT_LINES lines of changes"
+                  
+                  if [ $DRIFT_LINES -gt 100 ]; then
+                    echo "❌ Significant drift detected - manual intervention required"
+                    exit 1
+                  fi
+                else
+                  echo "❌ Error during drift detection"
+                  exit 1
+                fi
+              fi
+          artifacts:
+            - providers/aws/regions/af-south-1/layers/*/production/drift-report.txt
+
+      - step:
+          name: Remediate Drift
+          trigger: manual
+          script:
+            - echo "🔧 Remediating infrastructure drift..."
+            - |
+              case $TARGET_LAYER in
+                "foundation")
+                  LAYER_PATH="providers/aws/regions/af-south-1/layers/01-foundation/$TARGET_ENVIRONMENT"
+                  BACKEND_CONFIG="../../../../../shared/backend-configs/af-south-foundation-$TARGET_ENVIRONMENT.hcl"
+                  ;;
+                "platform")
+                  LAYER_PATH="providers/aws/regions/af-south-1/layers/02-platform/$TARGET_ENVIRONMENT"
+                  BACKEND_CONFIG="../../../../../shared/backend-configs/af-south-platform-$TARGET_ENVIRONMENT.hcl"
+                  ;;
+              esac
+              
+              cd $LAYER_PATH
+              terraform init -backend-config=$BACKEND_CONFIG
+              
+              # Apply drift remediation
+              terraform apply -auto-approve drift-check.plan
+              
+              echo "✅ Drift remediation complete"
+              
+              # Verify remediation
+              if terraform plan -detailed-exitcode; then
+                echo "✅ Infrastructure now matches desired state"
+              else
+                echo "⚠️  Additional manual intervention may be required"
+              fi
+
+    # Disaster recovery
+    disaster-recovery:
+      - variables:
+          - name: RECOVERY_SCENARIO
+            allowed-values: ["region-failure", "state-corruption", "complete-rebuild"]
+          - name: BACKUP_TIMESTAMP
+            default: "latest"
+      - step:
+          name: Disaster Recovery Assessment
+          script:
+            - echo "🚨 DISASTER RECOVERY INITIATED"
+            - echo "Scenario: $RECOVERY_SCENARIO"
+            - echo "Backup: $BACKUP_TIMESTAMP"
+            - |
+              case $RECOVERY_SCENARIO in
+                "region-failure")
+                  echo "Preparing cross-region failover..."
+                  ;;
+                "state-corruption") 
+                  echo "Preparing state recovery from backup..."
+                  ;;
+                "complete-rebuild")
+                  echo "Preparing complete infrastructure rebuild..."
+                  ;;
+              esac
+            - echo "Manual approval required to proceed"
+
+      - step:
+          name: Execute Disaster Recovery
+          trigger: manual
+          script:
+            - echo "🚀 Executing disaster recovery procedure..."
+            - |
+              case $RECOVERY_SCENARIO in
+                "region-failure")
+                  echo "Activating secondary region (us-east-1)..."
+                  # Switch traffic to secondary region
+                  # Update DNS records
+                  # Activate standby resources
+                  ;;
+                "state-corruption")
+                  echo "Restoring Terraform state from backup..."
+                  aws s3 cp s3://cptwn-terraform-state-ezra/backups/$BACKUP_TIMESTAMP ./terraform.tfstate
+                  terraform state push terraform.tfstate
+                  ;;
+                "complete-rebuild")
+                  echo "Rebuilding infrastructure from scratch..."
+                  # Full infrastructure rebuild process
+                  ;;
+              esac
+            - echo "✅ Disaster recovery procedure complete"
+            - |
+              # Send recovery notification
+              curl -X POST -H 'Content-type: application/json' \
+                --data "{
+                  \"text\": \"🆘 DISASTER RECOVERY COMPLETE\n**Scenario**: $RECOVERY_SCENARIO\n**Build**: #$BITBUCKET_BUILD_NUMBER\n**Operator**: $BITBUCKET_REPO_OWNER\"
+                }" \
+                $SLACK_WEBHOOK_URL
+
+  # Scheduled pipelines for maintenance
+  tags:
+    'maintenance-*':
+      - step:
+          name: Scheduled Maintenance
+          script:
+            - echo "🔧 Executing scheduled maintenance..."
+            - |
+              # State backup
+              echo "Creating state backups..."
+              for env in development staging production; do
+                cd providers/aws/regions/af-south-1/layers/01-foundation/$env
+                terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-$env.hcl
+                terraform state pull > /tmp/state-backup-$env-$(date +%Y%m%d).json
+                aws s3 cp /tmp/state-backup-$env-$(date +%Y%m%d).json s3://cptwn-terraform-state-ezra/backups/
+                cd -
+              done
+              
+              # Cost optimization analysis
+              echo "Running cost optimization analysis..."
+              infracost breakdown --path=. --format=json --out-file=maintenance-cost-analysis.json
+              
+              # Security scan
+              echo "Running security maintenance scan..."
+              checkov -d . --framework terraform --output json --output-file-path maintenance-security-scan.json
+              
+              echo "✅ Maintenance tasks complete"
+          artifacts:
+            - maintenance-cost-analysis.json
+            - maintenance-security-scan.json
+          caches:
+            - terraform

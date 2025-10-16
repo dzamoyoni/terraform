@@ -119,14 +119,14 @@ output "availability_zones" {
 output "foundation_summary" {
   description = "Summary of foundation infrastructure created"
   value = {
-    vpc_id                    = aws_vpc.main.id
-    vpc_cidr                  = aws_vpc.main.cidr_block
-    availability_zones        = var.availability_zones
-    public_subnets           = length(aws_subnet.public)
-    platform_subnets         = length(aws_subnet.platform)
-    nat_gateways             = length(aws_nat_gateway.main)
-    internet_gateway         = aws_internet_gateway.main.id
-    vpc_endpoints_enabled    = var.enable_vpc_endpoints
-    vpc_flow_logs_enabled    = var.enable_vpc_flow_logs
+    vpc_id                = aws_vpc.main.id
+    vpc_cidr              = aws_vpc.main.cidr_block
+    availability_zones    = var.availability_zones
+    public_subnets        = length(aws_subnet.public)
+    platform_subnets      = length(aws_subnet.platform)
+    nat_gateways          = length(aws_nat_gateway.main)
+    internet_gateway      = aws_internet_gateway.main.id
+    vpc_endpoints_enabled = var.enable_vpc_endpoints
+    vpc_flow_logs_enabled = var.enable_vpc_flow_logs
   }
 }

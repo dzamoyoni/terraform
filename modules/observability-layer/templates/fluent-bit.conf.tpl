@@ -67,7 +67,7 @@
 
 %{ endfor ~}
 
-# Output to S3 with tenant-based partitioning
+# Output to S3 with enhanced hierarchical partitioning
 [OUTPUT]
     Name                         s3
     Match                        *
@@ -76,10 +76,12 @@
     total_file_size             50M
     upload_timeout              10m
     use_put_object              On
-    s3_key_format               /logs/cluster=${cluster_name}/tenant=$${tenant}/year=%Y/month=%m/day=%d/hour=%H/%Y%m%d-%H%M%S-$UUID.gz
+    s3_key_format               logs/cluster=${cluster_name}/tenant=$${tenant}/service=$${kubernetes_pod_name}/year=%Y/month=%m/day=%d/hour=%H/fluent-bit-logs-%Y%m%d-%H%M%S-$UUID.gz
     s3_key_format_tag_delimiters .-
     auto_retry_requests         true
     storage_class               STANDARD_IA
+    compression                 gzip
+    content_type                application/gzip
 
 # Fallback output for debugging
 [OUTPUT]

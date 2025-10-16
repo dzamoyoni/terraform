@@ -80,16 +80,16 @@ output "network_acl_id" {
 output "client_summary" {
   description = "Summary of client infrastructure created"
   value = var.enabled ? {
-    client_name                = var.client_name
-    client_cidr_block         = var.client_cidr_block
-    availability_zones        = var.availability_zones
-    compute_subnets          = length(aws_subnet.compute)
-    database_subnets         = length(aws_subnet.database)
-    eks_subnets              = length(aws_subnet.eks)
-    total_subnets            = length(aws_subnet.compute) + length(aws_subnet.database) + length(aws_subnet.eks)
-    security_groups_created  = 3
-    route_tables_created     = length(aws_route_table.client)
-    network_acl_created      = true
+    client_name             = var.client_name
+    client_cidr_block       = var.client_cidr_block
+    availability_zones      = var.availability_zones
+    compute_subnets         = length(aws_subnet.compute)
+    database_subnets        = length(aws_subnet.database)
+    eks_subnets             = length(aws_subnet.eks)
+    total_subnets           = length(aws_subnet.compute) + length(aws_subnet.database) + length(aws_subnet.eks)
+    security_groups_created = 3
+    route_tables_created    = length(aws_route_table.client)
+    network_acl_created     = true
     database_type           = "PostgreSQL on EC2"
   } : null
 }

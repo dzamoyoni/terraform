@@ -12,7 +12,7 @@
 
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -26,7 +26,7 @@ locals {
   # Instance naming
   master_name  = "${var.client_name}-${var.environment}-db-master"
   replica_name = "${var.client_name}-${var.environment}-db-replica"
-  
+
   # Common tags for all resources
   common_tags = merge(var.tags, {
     Client      = var.client_name
@@ -36,16 +36,16 @@ locals {
     ManagedBy   = "terraform"
     Layer       = "database"
   })
-  
+
   # Security group rules for PostgreSQL
   postgres_port = var.postgres_port
-  
+
   # User data for PostgreSQL setup
   master_user_data = base64encode(templatefile("${path.module}/user-data/master-setup.sh", {
-    postgres_version     = var.postgres_version
-    postgres_port       = var.postgres_port
-    replica_user        = var.replication_user
-    replica_password    = var.replication_password
+    postgres_version   = var.postgres_version
+    postgres_port      = var.postgres_port
+    replica_user       = var.replication_user
+    replica_password   = var.replication_password
     db_name            = var.database_name
     db_user            = var.database_user
     db_password        = var.database_password
@@ -53,13 +53,13 @@ locals {
     monitoring_enabled = var.enable_monitoring
     client_name        = var.client_name
   }))
-  
+
   replica_user_data = base64encode(templatefile("${path.module}/user-data/replica-setup.sh", {
-    postgres_version     = var.postgres_version
-    postgres_port       = var.postgres_port
-    replica_user        = var.replication_user
-    replica_password    = var.replication_password
-    master_ip           = module.master_instance.private_ip
+    postgres_version   = var.postgres_version
+    postgres_port      = var.postgres_port
+    replica_user       = var.replication_user
+    replica_password   = var.replication_password
+    master_ip          = module.master_instance.private_ip
     monitoring_enabled = var.enable_monitoring
     client_name        = var.client_name
   }))
@@ -85,10 +85,10 @@ resource "aws_security_group" "postgres" {
 
   # Replication between master and replica
   ingress {
-    from_port = local.postgres_port
-    to_port   = local.postgres_port
-    protocol  = "tcp"
-    self      = true
+    from_port   = local.postgres_port
+    to_port     = local.postgres_port
+    protocol    = "tcp"
+    self        = true
     description = "PostgreSQL replication between instances"
   }
 
@@ -129,7 +129,7 @@ resource "aws_security_group" "postgres" {
     Name = "${var.client_name}-${var.environment}-postgres-sg"
     Type = "security-group"
   })
-  
+
   lifecycle {
     create_before_destroy = true
   }
@@ -152,19 +152,19 @@ module "master_instance" {
   associate_public_ip = false
 
   # Advanced configuration
-  enable_monitoring          = var.enable_monitoring
-  ebs_optimized             = true
-  disable_api_termination   = var.enable_deletion_protection
-  user_data_base64          = local.master_user_data
+  enable_monitoring       = var.enable_monitoring
+  ebs_optimized           = true
+  disable_api_termination = var.enable_deletion_protection
+  user_data_base64        = local.master_user_data
 
   # Storage configuration
   volume_type                = var.root_volume_type
-  volume_size               = var.root_volume_size
-  volume_iops               = var.root_volume_iops
-  volume_throughput         = var.root_volume_throughput
-  root_volume_encrypted     = var.enable_encryption
+  volume_size                = var.root_volume_size
+  volume_iops                = var.root_volume_iops
+  volume_throughput          = var.root_volume_throughput
+  root_volume_encrypted      = var.enable_encryption
   delete_root_on_termination = false
-  kms_key_id               = var.kms_key_id
+  kms_key_id                 = var.kms_key_id
 
   # Additional EBS volumes for PostgreSQL data
   extra_volumes = [
@@ -178,9 +178,9 @@ module "master_instance" {
       encrypted   = var.enable_encryption
       kms_key_id  = var.kms_key_id
       tags = {
-        Name        = "${local.master_name}-data-volume"
-        VolumeType  = "database-data"
-        Purpose     = "postgresql-data"
+        Name       = "${local.master_name}-data-volume"
+        VolumeType = "database-data"
+        Purpose    = "postgresql-data"
       }
     },
     {
@@ -193,9 +193,9 @@ module "master_instance" {
       encrypted   = var.enable_encryption
       kms_key_id  = var.kms_key_id
       tags = {
-        Name        = "${local.master_name}-wal-volume"
-        VolumeType  = "database-wal"
-        Purpose     = "postgresql-wal"
+        Name       = "${local.master_name}-wal-volume"
+        VolumeType = "database-wal"
+        Purpose    = "postgresql-wal"
       }
     },
     {
@@ -206,26 +206,26 @@ module "master_instance" {
       encrypted   = var.enable_encryption
       kms_key_id  = var.kms_key_id
       tags = {
-        Name        = "${local.master_name}-backup-volume"
-        VolumeType  = "database-backup"
-        Purpose     = "postgresql-backup"
+        Name       = "${local.master_name}-backup-volume"
+        VolumeType = "database-backup"
+        Purpose    = "postgresql-backup"
       }
     }
   ]
 
   # IAM configuration
-  create_iam_role           = true
-  enable_ssm               = true
-  additional_iam_policies  = var.additional_iam_policies
+  create_iam_role         = true
+  enable_ssm              = true
+  additional_iam_policies = var.additional_iam_policies
 
   # Client identification
-  client_name   = var.client_name
-  service_type  = "database-master"
-  environment   = var.environment
+  client_name  = var.client_name
+  service_type = "database-master"
+  environment  = var.environment
 
   tags = merge(local.common_tags, {
-    Name = local.master_name
-    Role = "database-master"
+    Name         = local.master_name
+    Role         = "database-master"
     DatabaseType = "postgresql-master"
   })
 }
@@ -248,19 +248,19 @@ module "replica_instance" {
   associate_public_ip = false
 
   # Advanced configuration
-  enable_monitoring          = var.enable_monitoring
-  ebs_optimized             = true
-  disable_api_termination   = var.enable_deletion_protection
-  user_data_base64          = local.replica_user_data
+  enable_monitoring       = var.enable_monitoring
+  ebs_optimized           = true
+  disable_api_termination = var.enable_deletion_protection
+  user_data_base64        = local.replica_user_data
 
   # Storage configuration
   volume_type                = var.root_volume_type
-  volume_size               = var.root_volume_size
-  volume_iops               = var.root_volume_iops
-  volume_throughput         = var.root_volume_throughput
-  root_volume_encrypted     = var.enable_encryption
+  volume_size                = var.root_volume_size
+  volume_iops                = var.root_volume_iops
+  volume_throughput          = var.root_volume_throughput
+  root_volume_encrypted      = var.enable_encryption
   delete_root_on_termination = false
-  kms_key_id               = var.kms_key_id
+  kms_key_id                 = var.kms_key_id
 
   # Additional EBS volumes for PostgreSQL data (replica)
   extra_volumes = [
@@ -274,9 +274,9 @@ module "replica_instance" {
       encrypted   = var.enable_encryption
       kms_key_id  = var.kms_key_id
       tags = {
-        Name        = "${local.replica_name}-data-volume"
-        VolumeType  = "database-data"
-        Purpose     = "postgresql-data"
+        Name       = "${local.replica_name}-data-volume"
+        VolumeType = "database-data"
+        Purpose    = "postgresql-data"
       }
     },
     {
@@ -289,26 +289,26 @@ module "replica_instance" {
       encrypted   = var.enable_encryption
       kms_key_id  = var.kms_key_id
       tags = {
-        Name        = "${local.replica_name}-wal-volume"
-        VolumeType  = "database-wal"
-        Purpose     = "postgresql-wal"
+        Name       = "${local.replica_name}-wal-volume"
+        VolumeType = "database-wal"
+        Purpose    = "postgresql-wal"
       }
     }
   ]
 
   # IAM configuration
-  create_iam_role           = true
-  enable_ssm               = true
-  additional_iam_policies  = var.additional_iam_policies
+  create_iam_role         = true
+  enable_ssm              = true
+  additional_iam_policies = var.additional_iam_policies
 
   # Client identification
-  client_name   = var.client_name
-  service_type  = "database-replica"
-  environment   = var.environment
+  client_name  = var.client_name
+  service_type = "database-replica"
+  environment  = var.environment
 
   tags = merge(local.common_tags, {
-    Name = local.replica_name
-    Role = "database-replica"
+    Name         = local.replica_name
+    Role         = "database-replica"
     DatabaseType = "postgresql-replica"
   })
 
@@ -328,10 +328,11 @@ resource "aws_route53_record" "master" {
   ttl     = 300
   records = [module.master_instance.private_ip]
 
-  tags = merge(local.common_tags, {
-    Name = "${var.client_name}-db-master-dns"
-    Type = "dns-record"
-  })
+  # Note: Route 53 records don't support tags in older AWS provider versions
+  # tags = merge(local.common_tags, {
+  #   Name = "${var.client_name}-db-master-dns"
+  #   Type = "dns-record"
+  # })
 }
 
 resource "aws_route53_record" "replica" {
@@ -342,10 +343,11 @@ resource "aws_route53_record" "replica" {
   ttl     = 300
   records = [module.replica_instance[0].private_ip]
 
-  tags = merge(local.common_tags, {
-    Name = "${var.client_name}-db-replica-dns"
-    Type = "dns-record"
-  })
+  # Note: Route 53 records don't support tags in older AWS provider versions
+  # tags = merge(local.common_tags, {
+  #   Name = "${var.client_name}-db-replica-dns"
+  #   Type = "dns-record"
+  # })
 }
 
 # ===================================================================================
@@ -356,7 +358,7 @@ resource "aws_ssm_parameter" "master_endpoint" {
   name  = "/terraform/${var.environment}/${var.client_name}/database/master/endpoint"
   type  = "String"
   value = var.create_dns_records ? aws_route53_record.master[0].name : module.master_instance.private_ip
-  
+
   tags = merge(local.common_tags, {
     Name = "${var.client_name}-db-master-endpoint"
     Type = "ssm-parameter"
@@ -368,7 +370,7 @@ resource "aws_ssm_parameter" "replica_endpoint" {
   name  = "/terraform/${var.environment}/${var.client_name}/database/replica/endpoint"
   type  = "String"
   value = var.create_dns_records ? aws_route53_record.replica[0].name : module.replica_instance[0].private_ip
-  
+
   tags = merge(local.common_tags, {
     Name = "${var.client_name}-db-replica-endpoint"
     Type = "ssm-parameter"
@@ -379,7 +381,7 @@ resource "aws_ssm_parameter" "database_port" {
   name  = "/terraform/${var.environment}/${var.client_name}/database/port"
   type  = "String"
   value = tostring(var.postgres_port)
-  
+
   tags = merge(local.common_tags, {
     Name = "${var.client_name}-db-port"
     Type = "ssm-parameter"
@@ -390,7 +392,7 @@ resource "aws_ssm_parameter" "database_name" {
   name  = "/terraform/${var.environment}/${var.client_name}/database/name"
   type  = "String"
   value = var.database_name
-  
+
   tags = merge(local.common_tags, {
     Name = "${var.client_name}-db-name"
     Type = "ssm-parameter"

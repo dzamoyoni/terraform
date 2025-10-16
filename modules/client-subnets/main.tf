@@ -14,11 +14,11 @@ terraform {
 # STANDALONE COMPUTE SUBNETS - Per Client
 resource "aws_subnet" "compute" {
   count = var.enabled ? length(var.availability_zones) : 0
-  
+
   vpc_id            = var.vpc_id
-  cidr_block        = cidrsubnet(var.client_cidr_block, 4, count.index)  # /26 subnets (62 IPs each)
+  cidr_block        = cidrsubnet(var.client_cidr_block, 4, count.index) # /26 subnets (62 IPs each)
   availability_zone = var.availability_zones[count.index]
-  
+
   tags = merge(var.common_tags, {
     Name       = "${var.project_name}-${var.client_name}-compute-${var.availability_zones[count.index]}"
     Purpose    = "Standalone Compute Instances"
@@ -28,7 +28,7 @@ resource "aws_subnet" "compute" {
     SubnetType = "Private"
     SubnetTier = "Compute"
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }
@@ -37,11 +37,11 @@ resource "aws_subnet" "compute" {
 # DATABASE SUBNETS - Per Client
 resource "aws_subnet" "database" {
   count = var.enabled ? length(var.availability_zones) : 0
-  
+
   vpc_id            = var.vpc_id
-  cidr_block        = cidrsubnet(var.client_cidr_block, 4, count.index + 2)  # /26 subnets (62 IPs each)
+  cidr_block        = cidrsubnet(var.client_cidr_block, 4, count.index + 2) # /26 subnets (62 IPs each)
   availability_zone = var.availability_zones[count.index]
-  
+
   tags = merge(var.common_tags, {
     Name       = "${var.project_name}-${var.client_name}-database-${var.availability_zones[count.index]}"
     Purpose    = "Database Layer"
@@ -51,7 +51,7 @@ resource "aws_subnet" "database" {
     SubnetType = "Private"
     SubnetTier = "Database"
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }
@@ -60,23 +60,23 @@ resource "aws_subnet" "database" {
 # ☸️ EKS NODEGROUP SUBNETS - Per Client (Largest allocation)
 resource "aws_subnet" "eks" {
   count = var.enabled ? length(var.availability_zones) : 0
-  
+
   vpc_id            = var.vpc_id
-  cidr_block        = cidrsubnet(var.client_cidr_block, 2, count.index + 1)  # /24 subnets (254 IPs each)
+  cidr_block        = cidrsubnet(var.client_cidr_block, 2, count.index + 1) # /24 subnets (254 IPs each)
   availability_zone = var.availability_zones[count.index]
-  
+
   tags = merge(var.common_tags, {
-    Name                            = "${var.project_name}-${var.client_name}-eks-${var.availability_zones[count.index]}"
-    Purpose                         = "EKS NodeGroup"
-    Layer                           = "EKS"
-    Client                          = var.client_name
-    AZ                              = var.availability_zones[count.index]
-    SubnetType                      = "Private"
-    SubnetTier                      = "EKS"
-    "kubernetes.io/role/internal-elb" = "1"
+    Name                                        = "${var.project_name}-${var.client_name}-eks-${var.availability_zones[count.index]}"
+    Purpose                                     = "EKS NodeGroup"
+    Layer                                       = "EKS"
+    Client                                      = var.client_name
+    AZ                                          = var.availability_zones[count.index]
+    SubnetType                                  = "Private"
+    SubnetTier                                  = "EKS"
+    "kubernetes.io/role/internal-elb"           = "1"
     "kubernetes.io/cluster/${var.cluster_name}" = "owned"
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }
@@ -85,14 +85,14 @@ resource "aws_subnet" "eks" {
 # CLIENT ROUTE TABLES - Isolated per Client and AZ
 resource "aws_route_table" "client" {
   count = var.enabled ? length(var.availability_zones) : 0
-  
+
   vpc_id = var.vpc_id
-  
+
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = var.nat_gateway_ids[count.index]
   }
-  
+
   # Optional on-premises routes via VPN
   dynamic "route" {
     for_each = var.onprem_cidr_blocks
@@ -101,7 +101,7 @@ resource "aws_route_table" "client" {
       gateway_id = var.vpn_gateway_id
     }
   }
-  
+
   tags = merge(var.common_tags, {
     Name    = "${var.project_name}-${var.client_name}-rt-${var.availability_zones[count.index]}"
     Purpose = "Client Isolated Route Table"
@@ -109,7 +109,7 @@ resource "aws_route_table" "client" {
     Client  = var.client_name
     AZ      = var.availability_zones[count.index]
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }
@@ -118,10 +118,10 @@ resource "aws_route_table" "client" {
 # ROUTE TABLE ASSOCIATIONS - Compute Subnets
 resource "aws_route_table_association" "compute" {
   count = var.enabled ? length(aws_subnet.compute) : 0
-  
+
   subnet_id      = aws_subnet.compute[count.index].id
   route_table_id = aws_route_table.client[count.index].id
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }
@@ -130,10 +130,10 @@ resource "aws_route_table_association" "compute" {
 # ROUTE TABLE ASSOCIATIONS - Database Subnets
 resource "aws_route_table_association" "database" {
   count = var.enabled ? length(aws_subnet.database) : 0
-  
+
   subnet_id      = aws_subnet.database[count.index].id
   route_table_id = aws_route_table.client[count.index].id
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }
@@ -142,10 +142,10 @@ resource "aws_route_table_association" "database" {
 # ROUTE TABLE ASSOCIATIONS - EKS Subnets
 resource "aws_route_table_association" "eks" {
   count = var.enabled ? length(aws_subnet.eks) : 0
-  
+
   subnet_id      = aws_subnet.eks[count.index].id
   route_table_id = aws_route_table.client[count.index].id
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }
@@ -156,11 +156,11 @@ resource "aws_route_table_association" "eks" {
 # Compute Layer Security Group
 resource "aws_security_group" "compute" {
   count = var.enabled ? 1 : 0
-  
+
   name_prefix = "${var.project_name}-${var.client_name}-compute-"
   vpc_id      = var.vpc_id
   description = "Security group for ${var.client_name} compute instances"
-  
+
   # SSH access from VPN/Bastion
   ingress {
     description = "SSH from management"
@@ -169,7 +169,7 @@ resource "aws_security_group" "compute" {
     protocol    = "tcp"
     cidr_blocks = var.management_cidr_blocks
   }
-  
+
   # HTTP/HTTPS for application traffic
   ingress {
     description = "HTTP from EKS subnets"
@@ -178,7 +178,7 @@ resource "aws_security_group" "compute" {
     protocol    = "tcp"
     cidr_blocks = aws_subnet.eks[*].cidr_block
   }
-  
+
   ingress {
     description = "HTTPS from EKS subnets"
     from_port   = 443
@@ -186,7 +186,7 @@ resource "aws_security_group" "compute" {
     protocol    = "tcp"
     cidr_blocks = aws_subnet.eks[*].cidr_block
   }
-  
+
   # Custom application ports
   dynamic "ingress" {
     for_each = var.custom_ports
@@ -198,7 +198,7 @@ resource "aws_security_group" "compute" {
       cidr_blocks = aws_subnet.eks[*].cidr_block
     }
   }
-  
+
   egress {
     description = "All outbound traffic"
     from_port   = 0
@@ -206,14 +206,14 @@ resource "aws_security_group" "compute" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = merge(var.common_tags, {
     Name    = "${var.project_name}-${var.client_name}-compute-sg"
     Purpose = "Compute Layer Security"
     Layer   = "Compute"
     Client  = var.client_name
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   #   create_before_destroy = true
@@ -223,11 +223,11 @@ resource "aws_security_group" "compute" {
 # Database Layer Security Group - For PostgreSQL on EC2
 resource "aws_security_group" "database" {
   count = var.enabled ? 1 : 0
-  
+
   name_prefix = "${var.project_name}-${var.client_name}-database-"
   vpc_id      = var.vpc_id
   description = "Security group for ${var.client_name} PostgreSQL database instances on EC2"
-  
+
   # Custom PostgreSQL ports from compute subnets
   dynamic "ingress" {
     for_each = var.database_ports
@@ -239,7 +239,7 @@ resource "aws_security_group" "database" {
       cidr_blocks = aws_subnet.compute[*].cidr_block
     }
   }
-  
+
   # Custom PostgreSQL ports from EKS subnets
   dynamic "ingress" {
     for_each = var.database_ports
@@ -251,7 +251,7 @@ resource "aws_security_group" "database" {
       cidr_blocks = aws_subnet.eks[*].cidr_block
     }
   }
-  
+
   # Custom PostgreSQL ports from other database subnets (for replication)
   dynamic "ingress" {
     for_each = var.database_ports
@@ -263,7 +263,7 @@ resource "aws_security_group" "database" {
       cidr_blocks = aws_subnet.database[*].cidr_block
     }
   }
-  
+
   # SSH for maintenance (restricted to management networks)
   ingress {
     description = "SSH from management networks"
@@ -272,7 +272,7 @@ resource "aws_security_group" "database" {
     protocol    = "tcp"
     cidr_blocks = var.management_cidr_blocks
   }
-  
+
   # PostgreSQL monitoring ports (e.g., pg_stat_statements, pgAdmin)
   ingress {
     description = "PostgreSQL monitoring from management"
@@ -281,7 +281,7 @@ resource "aws_security_group" "database" {
     protocol    = "tcp"
     cidr_blocks = var.management_cidr_blocks
   }
-  
+
   egress {
     description = "All outbound traffic"
     from_port   = 0
@@ -289,14 +289,14 @@ resource "aws_security_group" "database" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = merge(var.common_tags, {
     Name    = "${var.project_name}-${var.client_name}-database-sg"
     Purpose = "PostgreSQL Database on EC2 Security"
     Layer   = "Database"
     Client  = var.client_name
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   #   create_before_destroy = true
@@ -306,11 +306,11 @@ resource "aws_security_group" "database" {
 # EKS NodeGroup Security Group
 resource "aws_security_group" "eks" {
   count = var.enabled ? 1 : 0
-  
+
   name_prefix = "${var.project_name}-${var.client_name}-eks-"
   vpc_id      = var.vpc_id
   description = "Security group for ${var.client_name} EKS node groups"
-  
+
   # Allow all traffic between EKS nodes
   ingress {
     description = "All traffic from EKS nodes"
@@ -319,7 +319,7 @@ resource "aws_security_group" "eks" {
     protocol    = "tcp"
     self        = true
   }
-  
+
   # NodePort services
   ingress {
     description = "NodePort from EKS subnets"
@@ -328,7 +328,7 @@ resource "aws_security_group" "eks" {
     protocol    = "tcp"
     cidr_blocks = aws_subnet.eks[*].cidr_block
   }
-  
+
   # SSH access for troubleshooting
   ingress {
     description = "SSH from management"
@@ -337,7 +337,7 @@ resource "aws_security_group" "eks" {
     protocol    = "tcp"
     cidr_blocks = var.management_cidr_blocks
   }
-  
+
   egress {
     description = "All outbound traffic"
     from_port   = 0
@@ -345,14 +345,14 @@ resource "aws_security_group" "eks" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = merge(var.common_tags, {
     Name    = "${var.project_name}-${var.client_name}-eks-sg"
     Purpose = "EKS NodeGroup Security"
     Layer   = "EKS"
     Client  = var.client_name
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   #   create_before_destroy = true
@@ -362,14 +362,14 @@ resource "aws_security_group" "eks" {
 #  NETWORK ACCESS CONTROL LISTS - Additional Security Layer
 resource "aws_network_acl" "client" {
   count = var.enabled ? 1 : 0
-  
-  vpc_id     = var.vpc_id
+
+  vpc_id = var.vpc_id
   subnet_ids = concat(
     aws_subnet.compute[*].id,
     aws_subnet.database[*].id,
     aws_subnet.eks[*].id
   )
-  
+
   # Allow inbound traffic within client CIDR
   ingress {
     protocol   = "-1"
@@ -379,7 +379,7 @@ resource "aws_network_acl" "client" {
     from_port  = 0
     to_port    = 0
   }
-  
+
   # Allow inbound traffic from management networks
   dynamic "ingress" {
     for_each = { for idx, cidr in var.management_cidr_blocks : idx => cidr }
@@ -392,7 +392,7 @@ resource "aws_network_acl" "client" {
       to_port    = 0
     }
   }
-  
+
   # Allow return traffic from internet (ephemeral ports)
   ingress {
     protocol   = "tcp"
@@ -402,7 +402,7 @@ resource "aws_network_acl" "client" {
     from_port  = 32768
     to_port    = 65535
   }
-  
+
   # Allow all outbound traffic
   egress {
     protocol   = "-1"
@@ -412,14 +412,14 @@ resource "aws_network_acl" "client" {
     from_port  = 0
     to_port    = 0
   }
-  
+
   tags = merge(var.common_tags, {
     Name    = "${var.project_name}-${var.client_name}-nacl"
     Purpose = "Client Network ACL"
     Layer   = "Foundation"
     Client  = var.client_name
   })
-  
+
   # lifecycle {
   #   prevent_destroy = true
   # }

@@ -216,7 +216,7 @@ log "Configuring postgresql.conf for replica"
 cat >> "$CONFIG_DIR/postgresql.conf" << EOF
 
 # ============================================================================
-# Client: $CLIENT_NAME - PostgreSQL Replica Configuration
+# Client: ${client_name} - PostgreSQL Replica Configuration
 # ============================================================================
 
 # Connection settings
@@ -273,7 +273,7 @@ EOF
 sudo -u postgres bash -c "cat >> '$DATA_DIR/postgresql.auto.conf' << EOF
 # Replication connection settings
 primary_conninfo = 'host=$MASTER_IP port=$POSTGRES_PORT user=$REPLICA_USER password=$REPLICA_PASSWORD sslmode=prefer sslcompression=0 target_session_attrs=any'
-primary_slot_name = '${CLIENT_NAME}_replica_slot'
+primary_slot_name = '${client_name}_replica_slot'
 EOF"
 
 # Create replication slot on master (if not exists)
@@ -282,7 +282,7 @@ PGPASSWORD="$REPLICA_PASSWORD" psql \
     -h "$MASTER_IP" \
     -p "$POSTGRES_PORT" \
     -U "$REPLICA_USER" \
-    -c "SELECT pg_create_physical_replication_slot('${CLIENT_NAME}_replica_slot');" \
+    -c "SELECT pg_create_physical_replication_slot('${client_name}_replica_slot');" \
     postgres || log "Replication slot may already exist"
 
 # ============================================================================
@@ -415,7 +415,7 @@ fi
 
 # Check replication lag
 LAG=\$(sudo -u postgres psql -t -c "SELECT CASE WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN 0 ELSE EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp()) END;")
-if [ "\${LAG%%.*}" -gt 60 ]; then
+if [ "\$\{LAG%%.*\}" -gt 60 ]; then
     echo "WARNING: Replication lag is \$LAG seconds"
     exit 1
 fi
@@ -426,7 +426,7 @@ if ! pg_isready -h $MASTER_IP -p $POSTGRES_PORT -U $REPLICA_USER >/dev/null 2>&1
     exit 1
 fi
 
-echo "OK: PostgreSQL replica is healthy (lag: \${LAG}s)"
+echo "OK: PostgreSQL replica is healthy (lag: \$\{LAG\}s)"
 exit 0
 EOF
 

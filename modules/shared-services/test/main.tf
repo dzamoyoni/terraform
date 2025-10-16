@@ -22,23 +22,23 @@ terraform {
 # Test our improved ALB Controller module
 module "test_aws_load_balancer_controller" {
   source = "../aws-load-balancer-controller"
-  
+
   # Core configuration
   cluster_name = "test-cluster"
-  region      = "us-east-1"
-  environment = "test"
-  vpc_id      = "vpc-12345678"
-  
+  region       = "us-east-1"
+  environment  = "test"
+  vpc_id       = "vpc-12345678"
+
   # IAM configuration  
   oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE1234567890ABCDEF"
-  
+
   # Service configuration
   helm_chart_version   = "1.8.1"
   service_account_name = "test-aws-load-balancer-controller-sa"
-  
+
   # Test external IRSA role (optional)
-  external_irsa_role_arn = null  # Using internal role creation
-  
+  external_irsa_role_arn = null # Using internal role creation
+
   tags = {
     Test = "SharedServicesModuleFixes"
   }
@@ -47,22 +47,22 @@ module "test_aws_load_balancer_controller" {
 # Test our improved Cluster Autoscaler module  
 module "test_cluster_autoscaler" {
   source = "../cluster-autoscaler"
-  
+
   # Core configuration
   cluster_name = "test-cluster"
-  region      = "us-east-1"
-  environment = "test"
-  
+  region       = "us-east-1"
+  environment  = "test"
+
   # IAM configuration
   oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE1234567890ABCDEF"
-  
+
   # Service configuration
   helm_chart_version   = "9.37.0"
   service_account_name = "test-cluster-autoscaler-sa"
-  
+
   # Test external IRSA role (optional)
-  external_irsa_role_arn = null  # Using internal role creation
-  
+  external_irsa_role_arn = null # Using internal role creation
+
   tags = {
     Test = "SharedServicesModuleFixes"
   }

@@ -7,7 +7,7 @@
 
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -28,14 +28,14 @@ terraform {
 # Configure AWS Provider
 provider "aws" {
   region = "us-west-2"
-  
+
   default_tags {
     tags = {
-      Environment   = "production"
-      Layer        = "foundation"
-      ManagedBy    = "terraform"
-      Repository   = "infrastructure"
-      Region       = "us-west-2"
+      Environment = "production"
+      Layer       = "foundation"
+      ManagedBy   = "terraform"
+      Repository  = "infrastructure"
+      Region      = "us-west-2"
     }
   }
 }
@@ -48,33 +48,33 @@ module "foundation" {
   source = "../modules/foundation-layer"
 
   # Mode Configuration - CREATE MODE for new regions
-  import_mode = false  # Creates new infrastructure
+  import_mode = false # Creates new infrastructure
 
   # General Configuration
   environment        = "production"
-  vpc_name          = "usw2-production-vpc"
-  cluster_name      = "us-west-2-cluster-01"
-  aws_region        = "us-west-2"
+  vpc_name           = "usw2-production-vpc"
+  cluster_name       = "us-west-2-cluster-01"
+  aws_region         = "us-west-2"
   availability_zones = ["us-west-2a", "us-west-2b"]
 
   # NEW Infrastructure Configuration
-  vpc_cidr         = "172.21.0.0/16"        # Different CIDR per region
-  private_subnets  = ["172.21.1.0/24", "172.21.2.0/24"]
-  public_subnets   = ["172.21.101.0/24", "172.21.102.0/24"]
-  
+  vpc_cidr        = "172.21.0.0/16" # Different CIDR per region
+  private_subnets = ["172.21.1.0/24", "172.21.2.0/24"]
+  public_subnets  = ["172.21.101.0/24", "172.21.102.0/24"]
+
   # Gateway Configuration
   enable_nat_gateway = true
   single_nat_gateway = true
-  
+
   # DNS Configuration
   enable_dns_hostnames = true
   enable_dns_support   = true
-  
+
   # Security Groups - Create new ones for new region
   create_security_groups = true
 
   # VPN Configuration (optional for new regions)
-  enable_vpn = false  # Or configure as needed:
+  enable_vpn = false # Or configure as needed:
   # vpn_config = {
   #   customer_gateway_ip = "YOUR_REGION_VPN_IP"
   #   client_cidr        = "YOUR_CLIENT_CIDR"
@@ -82,12 +82,12 @@ module "foundation" {
   # }
 
   common_tags = {
-    Environment   = "production"
-    Region        = "us-west-2"
-    Layer         = "foundation"
-    ManagedBy     = "terraform"
-    Repository    = "infrastructure"
-    CreateMode    = "true"
+    Environment = "production"
+    Region      = "us-west-2"
+    Layer       = "foundation"
+    ManagedBy   = "terraform"
+    Repository  = "infrastructure"
+    CreateMode  = "true"
   }
 }
 

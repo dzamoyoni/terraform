@@ -15,9 +15,9 @@ resource "aws_ssm_parameter" "vpc_id" {
   value = local.vpc_id
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -31,9 +31,9 @@ resource "aws_ssm_parameter" "vpc_cidr" {
   value = local.vpc_cidr_block
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -47,9 +47,9 @@ resource "aws_ssm_parameter" "private_subnets" {
   value = join(",", local.private_subnet_ids)
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -63,9 +63,9 @@ resource "aws_ssm_parameter" "public_subnets" {
   value = join(",", local.public_subnet_ids)
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -79,9 +79,9 @@ resource "aws_ssm_parameter" "private_subnet_cidrs" {
   value = join(",", local.private_subnet_cidrs)
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -95,9 +95,9 @@ resource "aws_ssm_parameter" "public_subnet_cidrs" {
   value = join(",", local.public_subnet_cidrs)
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -116,9 +116,9 @@ resource "aws_ssm_parameter" "internet_gateway_id" {
   value = local.internet_gateway_id
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -133,9 +133,9 @@ resource "aws_ssm_parameter" "nat_gateway_ids" {
   value = join(",", local.nat_gateway_ids)
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -154,9 +154,9 @@ resource "aws_ssm_parameter" "eks_cluster_sg_id" {
   value = local.eks_cluster_sg_id
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "security"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "security"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -171,9 +171,9 @@ resource "aws_ssm_parameter" "database_sg_id" {
   value = local.database_sg_id
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "security"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "security"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -188,9 +188,9 @@ resource "aws_ssm_parameter" "alb_sg_id" {
   value = local.alb_sg_id
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "security"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "security"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -208,9 +208,9 @@ resource "aws_ssm_parameter" "vpn_enabled" {
   value = tostring(local.vpn_enabled)
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -225,9 +225,9 @@ resource "aws_ssm_parameter" "vpn_gateway_id" {
   value = local.vpn_gateway_id
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "infrastructure"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "infrastructure"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -245,9 +245,9 @@ resource "aws_ssm_parameter" "deployed" {
   value = "true"
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "metadata"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "metadata"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -261,9 +261,9 @@ resource "aws_ssm_parameter" "version" {
   value = "1.0.0"
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "metadata"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "metadata"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -277,9 +277,9 @@ resource "aws_ssm_parameter" "mode" {
   value = local.mode_name
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "metadata"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "metadata"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -293,9 +293,9 @@ resource "aws_ssm_parameter" "region" {
   value = var.aws_region
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "metadata"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "metadata"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {
@@ -309,9 +309,9 @@ resource "aws_ssm_parameter" "availability_zones" {
   value = join(",", var.availability_zones)
 
   tags = merge(local.common_tags, {
-    Layer       = "foundation"
-    Type        = "metadata"
-    ImportMode  = tostring(local.is_import_mode)
+    Layer      = "foundation"
+    Type       = "metadata"
+    ImportMode = tostring(local.is_import_mode)
   })
 
   lifecycle {

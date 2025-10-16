@@ -9,20 +9,20 @@
 output "logs_s3_bucket" {
   description = "S3 bucket information for logs"
   value = {
-    id     = aws_s3_bucket.logs.id
-    arn    = aws_s3_bucket.logs.arn
-    bucket = aws_s3_bucket.logs.bucket
-    region = aws_s3_bucket.logs.region
+    id     = module.logs_bucket.bucket_id
+    arn    = module.logs_bucket.bucket_arn
+    bucket = module.logs_bucket.bucket_id
+    region = module.logs_bucket.bucket_region
   }
 }
 
 output "traces_s3_bucket" {
   description = "S3 bucket information for traces"
   value = {
-    id     = aws_s3_bucket.traces.id
-    arn    = aws_s3_bucket.traces.arn
-    bucket = aws_s3_bucket.traces.bucket
-    region = aws_s3_bucket.traces.region
+    id     = module.traces_bucket.bucket_id
+    arn    = module.traces_bucket.bucket_arn
+    bucket = module.traces_bucket.bucket_id
+    region = module.traces_bucket.bucket_region
   }
 }
 
@@ -150,14 +150,14 @@ output "tenant_configurations" {
 resource "aws_ssm_parameter" "logs_bucket_name" {
   name  = "/${var.project_name}/${var.environment}/${var.region}/observability/logs-bucket-name"
   type  = "String"
-  value = aws_s3_bucket.logs.bucket
+  value = module.logs_bucket.bucket_id
   tags  = local.common_tags
 }
 
 resource "aws_ssm_parameter" "traces_bucket_name" {
   name  = "/${var.project_name}/${var.environment}/${var.region}/observability/traces-bucket-name"
   type  = "String"
-  value = aws_s3_bucket.traces.bucket
+  value = module.traces_bucket.bucket_id
   tags  = local.common_tags
 }
 
@@ -192,15 +192,15 @@ output "ssm_parameter_names" {
 output "observability_summary" {
   description = "Summary of deployed observability components"
   value = {
-    region                = var.region
-    cluster_name         = var.cluster_name
-    namespace            = local.observability_namespace
-    fluent_bit_enabled   = var.enable_fluent_bit
-    tempo_enabled        = var.enable_tempo
-    prometheus_enabled   = var.enable_prometheus
-    kiali_enabled        = var.enable_kiali
-    logs_bucket         = aws_s3_bucket.logs.bucket
-    traces_bucket       = aws_s3_bucket.traces.bucket
-    tenant_count        = length(var.tenant_configs)
+    region             = var.region
+    cluster_name       = var.cluster_name
+    namespace          = local.observability_namespace
+    fluent_bit_enabled = var.enable_fluent_bit
+    tempo_enabled      = var.enable_tempo
+    prometheus_enabled = var.enable_prometheus
+    kiali_enabled      = var.enable_kiali
+    logs_bucket        = module.logs_bucket.bucket_id
+    traces_bucket      = module.traces_bucket.bucket_id
+    tenant_count       = length(var.tenant_configs)
   }
 }

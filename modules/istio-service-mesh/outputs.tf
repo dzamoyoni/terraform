@@ -146,19 +146,19 @@ output "integration_info" {
         https = 443
       }
     } : null
-    
+
     # For observability integration
     telemetry_endpoints = {
-      tempo_endpoint = "tempo.istio-system.svc.cluster.local:4317"
+      tempo_endpoint          = "tempo.istio-system.svc.cluster.local:4317"
       prometheus_metrics_path = "/stats/prometheus"
     }
-    
+
     # For application configuration
     mesh_config = {
-      mesh_id        = var.mesh_id
-      trust_domain   = var.trust_domain
-      cluster_name   = var.cluster_name
-      region         = var.region
+      mesh_id      = var.mesh_id
+      trust_domain = var.trust_domain
+      cluster_name = var.cluster_name
+      region       = var.region
     }
   }
 }
@@ -170,8 +170,8 @@ output "integration_info" {
 output "monitoring_configuration" {
   description = "Monitoring configuration for integration with existing observability stack"
   value = {
-    service_monitor_enabled   = var.enable_service_monitor
-    prometheus_rules_enabled  = var.enable_prometheus_rules
+    service_monitor_enabled  = var.enable_service_monitor
+    prometheus_rules_enabled = var.enable_prometheus_rules
     tracing_enabled          = var.enable_distributed_tracing
     access_logging_enabled   = var.enable_access_logging
     tracing_sampling_rate    = var.tracing_sampling_rate
@@ -187,22 +187,22 @@ output "deployment_summary" {
   value = {
     istio_version = local.istio_version
     components = {
-      base_installed              = true
-      istiod_installed           = true
-      cni_installed              = var.enable_ambient_mode
-      ztunnel_installed          = var.enable_ambient_mode
-      ingress_gateway_installed  = var.enable_ingress_gateway
+      base_installed            = true
+      istiod_installed          = true
+      cni_installed             = var.enable_ambient_mode
+      ztunnel_installed         = var.enable_ambient_mode
+      ingress_gateway_installed = var.enable_ingress_gateway
     }
     namespaces = {
       istio_system  = kubernetes_namespace.istio_system.metadata[0].name
       istio_ingress = var.enable_ingress_gateway ? kubernetes_namespace.istio_system.metadata[0].name : "not-created"
     }
     features = {
-      ambient_mode_enabled       = var.enable_ambient_mode
+      ambient_mode_enabled        = var.enable_ambient_mode
       distributed_tracing_enabled = var.enable_distributed_tracing
-      access_logging_enabled    = var.enable_access_logging
-      service_monitor_enabled   = var.enable_service_monitor
-      prometheus_rules_enabled  = var.enable_prometheus_rules
+      access_logging_enabled      = var.enable_access_logging
+      service_monitor_enabled     = var.enable_service_monitor
+      prometheus_rules_enabled    = var.enable_prometheus_rules
     }
     application_namespaces = length(var.application_namespaces)
   }
@@ -215,9 +215,9 @@ output "deployment_summary" {
 output "ssm_parameter_names" {
   description = "SSM parameter names for integration with other layers"
   value = {
-    mesh_id              = "/${var.project_name}/${var.environment}/${var.region}/istio/mesh-id"
-    istio_version        = "/${var.project_name}/${var.environment}/${var.region}/istio/version"
+    mesh_id                  = "/${var.project_name}/${var.environment}/${var.region}/istio/mesh-id"
+    istio_version            = "/${var.project_name}/${var.environment}/${var.region}/istio/version"
     ingress_gateway_endpoint = "/${var.project_name}/${var.environment}/${var.region}/istio/ingress-gateway-endpoint"
-    ambient_mode_enabled = "/${var.project_name}/${var.environment}/${var.region}/istio/ambient-mode-enabled"
+    ambient_mode_enabled     = "/${var.project_name}/${var.environment}/${var.region}/istio/ambient-mode-enabled"
   }
 }

@@ -24,9 +24,9 @@ variable "vpc_id" {
 variable "customer_gateway_ip" {
   description = "Public IP address of the customer gateway (on-premises)"
   type        = string
-  
+
   validation {
-    condition = can(regex("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$", var.customer_gateway_ip))
+    condition     = can(regex("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$", var.customer_gateway_ip))
     error_message = "Customer gateway IP must be a valid IPv4 address."
   }
 }
@@ -35,9 +35,9 @@ variable "bgp_asn" {
   description = "BGP ASN for the customer gateway"
   type        = number
   default     = 65000
-  
+
   validation {
-    condition = var.bgp_asn >= 1 && var.bgp_asn <= 4294967295
+    condition     = var.bgp_asn >= 1 && var.bgp_asn <= 4294967295
     error_message = "BGP ASN must be between 1 and 4294967295."
   }
 }
@@ -46,9 +46,9 @@ variable "amazon_side_asn" {
   description = "BGP ASN for the Amazon side of the VPN connection"
   type        = number
   default     = 64512
-  
+
   validation {
-    condition = var.amazon_side_asn >= 64512 && var.amazon_side_asn <= 65534
+    condition     = var.amazon_side_asn >= 64512 && var.amazon_side_asn <= 65534
     error_message = "Amazon side ASN must be between 64512 and 65534."
   }
 }
@@ -62,7 +62,7 @@ variable "static_routes_only" {
 variable "onprem_cidr_blocks" {
   description = "List of on-premises CIDR blocks to route to"
   type        = list(string)
-  default     = ["178.162.141.130/32"]  # Your specific on-premises IP
+  default     = ["178.162.141.130/32"] # Your specific on-premises IP
 }
 
 variable "tunnel1_inside_cidr" {

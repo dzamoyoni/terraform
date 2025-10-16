@@ -22,7 +22,7 @@ HARDCODED_BACKENDS=(
     "/home/dennis.juma/terraform/providers/aws/regions/us-east-1/layers/03-databases/production/main.tf"
 )
 
-echo "📝 Step 1: Removing hardcoded backend blocks from main.tf files..."
+echo "Step 1: Removing hardcoded backend blocks from main.tf files..."
 
 # Function to remove hardcoded backend block
 remove_hardcoded_backend() {
@@ -51,7 +51,7 @@ for file in "${HARDCODED_BACKENDS[@]}"; do
 done
 
 echo ""
-echo "🏗️  Step 2: Generating standardized backend.hcl files for all layers..."
+echo "Step 2: Generating standardized backend.hcl files for all layers..."
 
 # Function to generate backend.hcl file
 generate_backend_hcl() {
@@ -110,7 +110,7 @@ dynamodb_table = "${lock_table}"
 # =============================================================================
 EOF
 
-    echo "    ✅ Generated: $backend_file"
+    echo "    Generated: $backend_file"
 }
 
 # Define all layers that need backend.hcl files
@@ -151,19 +151,19 @@ echo "🔍 Step 3: Validating generated backend configurations..."
 
 # Count generated files
 backend_count=$(find /home/dennis.juma/terraform/providers/aws/regions -name "backend.hcl" | wc -l)
-echo "    📊 Total backend.hcl files: $backend_count"
+echo "    Total backend.hcl files: $backend_count"
 
 # List all backend files for verification
 echo ""
-echo "📋 All backend.hcl files:"
+echo "All backend.hcl files:"
 find /home/dennis.juma/terraform/providers/aws/regions -name "backend.hcl" | sort
 
 echo ""
-echo "✅ Backend cleanup and standardization completed successfully!"
+echo "Backend cleanup and standardization completed successfully!"
 echo ""
-echo "🎯 Next steps:"
+echo "Next steps:"
 echo "   1. Test terraform init in any layer directory"
 echo "   2. Command: terraform init -backend-config=backend.hcl"
 echo "   3. Verify remote state access"
 echo ""
-echo "📖 Documentation: /home/dennis.juma/terraform/docs/BACKEND_STANDARDS.md"
+echo "Documentation: /home/dennis.juma/terraform/docs/BACKEND_STANDARDS.md"

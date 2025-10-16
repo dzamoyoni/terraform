@@ -176,12 +176,12 @@ variable "enable_vpn" {
 variable "vpn_config" {
   description = "[CREATE MODE] VPN configuration for client connections"
   type = object({
-    customer_gateway_ip     = optional(string, "")
-    client_cidr            = optional(string, "")
-    bgp_asn                = optional(number, 65000)
-    secondary_gateway_ip   = optional(string)
-    secondary_client_cidr  = optional(string)
-    secondary_bgp_asn      = optional(number, 65000)
+    customer_gateway_ip   = optional(string, "")
+    client_cidr           = optional(string, "")
+    bgp_asn               = optional(number, 65000)
+    secondary_gateway_ip  = optional(string)
+    secondary_client_cidr = optional(string)
+    secondary_bgp_asn     = optional(number, 65000)
   })
   default = {}
 }

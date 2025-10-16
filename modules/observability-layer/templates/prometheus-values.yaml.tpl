@@ -3,7 +3,10 @@
 
 prometheus:
   prometheusSpec:
-    # Resource configuration
+    # Priority class for critical infrastructure scheduling
+    priorityClassName: system-cluster-critical
+    
+    # Resource configuration - production optimized for busy clusters
     resources:
       requests:
         cpu: ${resources.requests.cpu}
@@ -11,6 +14,25 @@ prometheus:
       limits:
         cpu: ${resources.limits.cpu}
         memory: ${resources.limits.memory}
+    
+    # Node affinity for better scheduling
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+            - key: node.kubernetes.io/instance-type
+              operator: NotIn
+              values: ["t3.micro", "t3.small"]
+    
+    # Tolerations for dedicated nodes if needed
+    tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Exists"
+    - key: "node-role.kubernetes.io/master"
+      operator: "Exists"
+      effect: "NoSchedule"
 
     # Storage configuration
     storageSpec:

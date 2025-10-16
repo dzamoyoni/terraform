@@ -106,6 +106,74 @@ variable "traces_retention_days" {
 }
 
 # ============================================================================
+# Enhanced S3 Configuration (New)
+# ============================================================================
+
+variable "enable_intelligent_tiering" {
+  description = "Enable S3 Intelligent Tiering for cost optimization"
+  type        = bool
+  default     = true
+}
+
+variable "logs_kms_key_id" {
+  description = "KMS key ID for logs bucket encryption (empty for AES256)"
+  type        = string
+  default     = ""
+}
+
+variable "traces_kms_key_id" {
+  description = "KMS key ID for traces bucket encryption (empty for AES256)"
+  type        = string
+  default     = ""
+}
+
+variable "enable_cross_region_replication" {
+  description = "Enable cross-region replication for S3 buckets"
+  type        = bool
+  default     = false
+}
+
+variable "logs_replication_bucket_arn" {
+  description = "ARN of destination bucket for logs replication"
+  type        = string
+  default     = ""
+}
+
+variable "traces_replication_bucket_arn" {
+  description = "ARN of destination bucket for traces replication"
+  type        = string
+  default     = ""
+}
+
+variable "enable_bucket_monitoring" {
+  description = "Enable S3 bucket notifications and monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "logs_notification_topics" {
+  description = "SNS topics for logs bucket notifications"
+  type = list(object({
+    arn           = string
+    events        = list(string)
+    filter_prefix = optional(string, "")
+    filter_suffix = optional(string, "")
+  }))
+  default = []
+}
+
+variable "traces_notification_topics" {
+  description = "SNS topics for traces bucket notifications"
+  type = list(object({
+    arn           = string
+    events        = list(string)
+    filter_prefix = optional(string, "")
+    filter_suffix = optional(string, "")
+  }))
+  default = []
+}
+
+# ============================================================================
 # Fluent Bit Configuration
 # ============================================================================
 
@@ -307,12 +375,6 @@ variable "additional_s3_bucket_policies" {
   description = "Additional S3 bucket policies for cross-region access"
   type        = list(string)
   default     = []
-}
-
-variable "enable_cross_region_replication" {
-  description = "Enable cross-region replication for S3 buckets"
-  type        = bool
-  default     = false
 }
 
 variable "replication_destination_region" {

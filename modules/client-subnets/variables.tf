@@ -14,9 +14,9 @@ variable "project_name" {
 variable "client_name" {
   description = "Name of the client (ezra, mtn-ghana, etc.)"
   type        = string
-  
+
   validation {
-    condition = can(regex("^[a-z0-9-]+$", var.client_name))
+    condition     = can(regex("^[a-z0-9-]+$", var.client_name))
     error_message = "Client name must contain only lowercase letters, numbers, and hyphens."
   }
 }
@@ -29,9 +29,9 @@ variable "vpc_id" {
 variable "client_cidr_block" {
   description = "CIDR block allocated to this client (/22 = 4,094 IPs)"
   type        = string
-  
+
   validation {
-    condition = can(cidrhost(var.client_cidr_block, 0))
+    condition     = can(cidrhost(var.client_cidr_block, 0))
     error_message = "Client CIDR block must be a valid IPv4 CIDR block."
   }
 }
@@ -39,9 +39,9 @@ variable "client_cidr_block" {
 variable "availability_zones" {
   description = "List of availability zones to use"
   type        = list(string)
-  
+
   validation {
-    condition = length(var.availability_zones) >= 2
+    condition     = length(var.availability_zones) >= 2
     error_message = "At least 2 availability zones are required for high availability."
   }
 }
@@ -75,7 +75,7 @@ variable "common_tags" {
 variable "management_cidr_blocks" {
   description = "CIDR blocks for management access (VPN, bastion, etc.)"
   type        = list(string)
-  default     = ["10.0.0.0/8"]  # Default for on-premises networks
+  default     = ["10.0.0.0/8"] # Default for on-premises networks
 }
 
 variable "onprem_cidr_blocks" {
@@ -87,11 +87,11 @@ variable "onprem_cidr_blocks" {
 variable "custom_ports" {
   description = "Custom application ports to allow in security groups"
   type        = list(number)
-  default     = [8080, 9000, 3000]  # Common application ports
+  default     = [8080, 9000, 3000] # Common application ports
 }
 
 variable "database_ports" {
   description = "Custom database ports for PostgreSQL on EC2 instances"
   type        = list(number)
-  default     = [5432, 5433, 5434]  # Default PostgreSQL ports
+  default     = [5432, 5433, 5434] # Default PostgreSQL ports
 }

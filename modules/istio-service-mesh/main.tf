@@ -34,11 +34,11 @@ locals {
 
   # Istio component versions
   istio_version = var.istio_version
-  
+
   # Namespace configuration - Keep it simple
   namespaces = {
     istio_system  = "istio-system"
-    istio_ingress = "istio-ingress" 
+    istio_ingress = "istio-ingress"
   }
 }
 
@@ -51,8 +51,8 @@ resource "kubernetes_namespace" "istio_system" {
   metadata {
     name = local.namespaces.istio_system
     labels = merge(local.common_tags, {
-      "istio-injection" = "disabled"  # System namespace should not be injected
-      "name"           = local.namespaces.istio_system
+      "istio-injection" = "disabled" # System namespace should not be injected
+      "name"            = local.namespaces.istio_system
     })
   }
 }
@@ -83,21 +83,21 @@ resource "helm_release" "istio_base" {
   chart      = "base"
   version    = local.istio_version
   namespace  = local.namespaces.istio_system
-  
+
   create_namespace = false
-  
+
   set {
     name  = "global.meshID"
     value = var.mesh_id
   }
-  
+
   set {
     name  = "global.network"
     value = var.cluster_network
   }
-  
+
   depends_on = [kubernetes_namespace.istio_system]
-  
+
   timeout = 600
 }
 
@@ -111,44 +111,44 @@ resource "helm_release" "istiod" {
   chart      = "istiod"
   version    = local.istio_version
   namespace  = local.namespaces.istio_system
-  
+
   # Istiod configuration with ambient mode support and observability integration
   values = [yamlencode({
     global = {
       meshID  = var.mesh_id
       network = var.cluster_network
-      
+
       # Integration with existing observability layer
       meshConfig = {
         trustDomain = var.trust_domain
-        
+
         # Configure Istio to use existing Tempo for tracing
         defaultConfig = {
           tracing = {
             sampling = var.tracing_sampling_rate
             custom_tags = {
               cluster_name = var.cluster_name
-              region = var.region
+              region       = var.region
             }
           }
           # Enable ambient waypoint support
           waypoint = {
             resources = {
               requests = {
-                cpu = "100m"
+                cpu    = "100m"
                 memory = "128Mi"
               }
             }
           }
         }
-        
+
         # Extension providers for observability integration
         extensionProviders = [
           {
             name = "tempo"
             envoyOtelAls = {
               service = "tempo.istio-system.svc.cluster.local"
-              port = 4317
+              port    = 4317
             }
           },
           {
@@ -158,8 +158,8 @@ resource "helm_release" "istiod" {
                 metric_relabeling_configs = [
                   {
                     source_labels = ["__name__"]
-                    regex = "(istio_.*)"
-                    target_label = "__tmp_istio_name"
+                    regex         = "(istio_.*)"
+                    target_label  = "__tmp_istio_name"
                   }
                 ]
               }
@@ -168,49 +168,49 @@ resource "helm_release" "istiod" {
         ]
       }
     }
-    
+
     pilot = {
       # Enable ambient mode
       env = {
-        ENABLE_AMBIENT = var.enable_ambient_mode
+        ENABLE_AMBIENT       = var.enable_ambient_mode
         PILOT_ENABLE_AMBIENT = var.enable_ambient_mode
         # Integration with existing observability
         EXTERNAL_ISTIOD = false
         # Fix webhook validation readiness check issues
-        PILOT_ENABLE_VALIDATION = false
-        VALIDATION = false
-        WEBHOOK_CERT_CHECK = false
+        PILOT_ENABLE_VALIDATION     = false
+        VALIDATION                  = false
+        WEBHOOK_CERT_CHECK          = false
         DISABLE_WEBHOOK_AUTO_CONFIG = true
       }
-      
+
       # Resource configuration for production
       resources = var.istiod_resources
-      
+
       # High availability for production
       autoscaleEnabled = var.istiod_autoscale_enabled
       autoscaleMin     = var.istiod_autoscale_min
       autoscaleMax     = var.istiod_autoscale_max
-      
+
       # Deployment strategy
       rollingMaxUnavailable = "25%"
       rollingMaxSurge       = "100%"
     }
-    
+
     # Telemetry configuration - lightweight, delegate to existing stack
     telemetry = {
       v2 = {
         enabled = true
       }
     }
-    
+
     # Webhook configuration for validation
     istiodRemote = {
       enabled = false
     }
   })]
-  
+
   depends_on = [helm_release.istio_base]
-  
+
   timeout = 600
 }
 
@@ -220,47 +220,47 @@ resource "helm_release" "istiod" {
 
 resource "helm_release" "istio_cni" {
   count = var.enable_ambient_mode ? 1 : 0
-  
+
   name       = "istio-cni"
   repository = "https://istio-release.storage.googleapis.com/charts"
   chart      = "cni"
   version    = local.istio_version
   namespace  = local.namespaces.istio_system
-  
+
   values = [yamlencode({
     global = {
       meshID  = var.mesh_id
       network = var.cluster_network
     }
-    
+
     cni = {
       # CNI configuration for ambient mode
       ambient = {
         enabled = true
       }
-      
+
       # NEW 1.27+ feature: Istio-owned CNI config to prevent traffic bypass
-      istioOwnedCNIConfig = var.ambient_cni_istio_owned_config
+      istioOwnedCNIConfig         = var.ambient_cni_istio_owned_config
       istioOwnedCNIConfigFilename = var.ambient_cni_config_filename
-      
+
       # Resource configuration
       resources = var.cni_resources
-      
+
       # Node selector for CNI pods (production considerations)
       nodeSelector = var.cni_node_selector
-      
+
       # Tolerations for system nodes (now configurable via Helm in 1.27+)
       tolerations = var.cni_tolerations
-      
+
       # Logging configuration - integrate with existing Fluent Bit
       logging = {
         level = "info"
       }
     }
   })]
-  
+
   depends_on = [helm_release.istiod]
-  
+
   timeout = 600
 }
 
@@ -270,13 +270,13 @@ resource "helm_release" "istio_cni" {
 
 resource "helm_release" "ztunnel" {
   count = var.enable_ambient_mode ? 1 : 0
-  
+
   name       = "ztunnel"
   repository = "https://istio-release.storage.googleapis.com/charts"
   chart      = "ztunnel"
   version    = local.istio_version
   namespace  = local.namespaces.istio_system
-  
+
   values = [yamlencode({
     global = {
       meshID  = var.mesh_id
@@ -285,21 +285,21 @@ resource "helm_release" "ztunnel" {
         level = "info"
       }
     }
-    
+
     # Ztunnel configuration
     ztunnel = {
       # Resource configuration for production
       resources = var.ztunnel_resources
-      
+
       # Node selector
       nodeSelector = var.ztunnel_node_selector
-      
+
       # Tolerations for all nodes
       tolerations = var.ztunnel_tolerations
-      
+
       # Image configuration
       image = var.ztunnel_image
-      
+
       # Update strategy
       updateStrategy = {
         type = "RollingUpdate"
@@ -309,12 +309,12 @@ resource "helm_release" "ztunnel" {
       }
     }
   })]
-  
+
   depends_on = [
     helm_release.istiod,
     helm_release.istio_cni[0]
   ]
-  
+
   timeout = 600
 }
 
@@ -379,7 +379,7 @@ resource "kubernetes_cluster_role_binding" "istiod_webhook_rbac_fix" {
 
 resource "kubernetes_service_account" "istio_ingressgateway" {
   count = var.enable_ingress_gateway ? 1 : 0
-  
+
   metadata {
     name      = "istio-ingressgateway"
     namespace = local.namespaces.istio_system
@@ -389,13 +389,13 @@ resource "kubernetes_service_account" "istio_ingressgateway" {
       "release" = "istio-ingressgateway"
     })
   }
-  
+
   depends_on = [kubernetes_namespace.istio_system]
 }
 
 resource "kubernetes_deployment" "istio_ingressgateway" {
   count = var.enable_ingress_gateway ? 1 : 0
-  
+
   metadata {
     name      = "istio-ingressgateway"
     namespace = local.namespaces.istio_system
@@ -405,23 +405,23 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
       "release" = "istio-ingressgateway"
     })
   }
-  
+
   spec {
     replicas = var.ingress_gateway_replicas
-    
+
     selector {
       match_labels = {
         app   = "istio-ingressgateway"
         istio = "ingressgateway"
       }
     }
-    
+
     template {
       metadata {
         labels = {
-          app                         = "istio-ingressgateway"
-          istio                      = "ingressgateway"
-          "sidecar.istio.io/inject" = "false"  # Disable injection for manual deployment
+          app                       = "istio-ingressgateway"
+          istio                     = "ingressgateway"
+          "sidecar.istio.io/inject" = "false" # Disable injection for manual deployment
         }
         annotations = {
           "prometheus.io/path"   = "/stats/prometheus"
@@ -429,10 +429,10 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
           "prometheus.io/scrape" = "true"
         }
       }
-      
+
       spec {
         service_account_name = kubernetes_service_account.istio_ingressgateway[0].metadata[0].name
-        
+
         # Anti-affinity for high availability
         affinity {
           pod_anti_affinity {
@@ -449,17 +449,17 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
             }
           }
         }
-        
+
         security_context {
           fs_group     = 1337
           run_as_group = 1337
           run_as_user  = 1337
         }
-        
+
         container {
           name  = "istio-proxy"
           image = "docker.io/istio/proxyv2:${local.istio_version}"
-          
+
           args = [
             "proxy",
             "router",
@@ -469,7 +469,7 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
             "--proxyComponentLogLevel=misc:error",
             "--log_output_level=default:info"
           ]
-          
+
           env {
             name  = "JWT_POLICY"
             value = "third-party-jwt"
@@ -578,28 +578,28 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
             name  = "ISTIO_META_ROUTER_MODE"
             value = "standard"
           }
-          
+
           port {
             container_port = 15021
-            name          = "status-port"
-            protocol      = "TCP"
+            name           = "status-port"
+            protocol       = "TCP"
           }
           port {
             container_port = 8080
-            name          = "http2"
-            protocol      = "TCP"
+            name           = "http2"
+            protocol       = "TCP"
           }
           port {
             container_port = 8443
-            name          = "https"
-            protocol      = "TCP"
+            name           = "https"
+            protocol       = "TCP"
           }
           port {
             container_port = 15090
-            name          = "http-envoy-prom"
-            protocol      = "TCP"
+            name           = "http-envoy-prom"
+            protocol       = "TCP"
           }
-          
+
           readiness_probe {
             failure_threshold = 30
             http_get {
@@ -612,7 +612,7 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
             success_threshold     = 1
             timeout_seconds       = 1
           }
-          
+
           resources {
             limits = {
               cpu    = var.ingress_gateway_resources.limits.cpu
@@ -623,19 +623,19 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
               memory = var.ingress_gateway_resources.requests.memory
             }
           }
-          
+
           security_context {
             allow_privilege_escalation = false
             capabilities {
               drop = ["ALL"]
             }
-            privileged             = false
+            privileged                = false
             read_only_root_filesystem = true
-            run_as_group           = 1337
-            run_as_non_root       = true
-            run_as_user           = 1337
+            run_as_group              = 1337
+            run_as_non_root           = true
+            run_as_user               = 1337
           }
-          
+
           # Volume mounts for Istio proxy functionality
           volume_mount {
             mount_path = "/var/run/secrets/workload-spiffe-uds"
@@ -685,7 +685,7 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
             read_only  = true
           }
         }
-        
+
         # Volumes for Istio proxy functionality
         volume {
           name = "workload-socket"
@@ -737,7 +737,7 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
               service_account_token {
                 audience           = "istio-ca"
                 expiration_seconds = 43200
-                path              = "istio-token"
+                path               = "istio-token"
               }
             }
           }
@@ -766,7 +766,7 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
       }
     }
   }
-  
+
   depends_on = [
     kubernetes_namespace.istio_system,
     helm_release.istiod,
@@ -776,7 +776,7 @@ resource "kubernetes_deployment" "istio_ingressgateway" {
 
 resource "kubernetes_service" "istio_ingressgateway" {
   count = var.enable_ingress_gateway ? 1 : 0
-  
+
   metadata {
     name      = "istio-ingressgateway"
     namespace = local.namespaces.istio_system
@@ -790,15 +790,15 @@ resource "kubernetes_service" "istio_ingressgateway" {
       "service.beta.kubernetes.io/aws-load-balancer-internal" = "true"
     }
   }
-  
+
   spec {
     type = "ClusterIP"
-    
+
     selector = {
       app   = "istio-ingressgateway"
       istio = "ingressgateway"
     }
-    
+
     port {
       name        = "status-port"
       port        = 15021
@@ -818,13 +818,13 @@ resource "kubernetes_service" "istio_ingressgateway" {
       protocol    = "TCP"
     }
   }
-  
+
   depends_on = [kubernetes_deployment.istio_ingressgateway[0]]
 }
 
 resource "kubernetes_pod_disruption_budget_v1" "istio_ingressgateway" {
   count = var.enable_ingress_gateway ? 1 : 0
-  
+
   metadata {
     name      = "istio-ingressgateway"
     namespace = local.namespaces.istio_system
@@ -834,7 +834,7 @@ resource "kubernetes_pod_disruption_budget_v1" "istio_ingressgateway" {
       "release" = "istio-ingressgateway"
     })
   }
-  
+
   spec {
     min_available = 1
     selector {
@@ -843,7 +843,7 @@ resource "kubernetes_pod_disruption_budget_v1" "istio_ingressgateway" {
       }
     }
   }
-  
+
   depends_on = [kubernetes_deployment.istio_ingressgateway[0]]
 }
 
@@ -936,7 +936,7 @@ resource "kubernetes_manifest" "istio_telemetry_integration" {
 # Create and configure application namespaces
 resource "kubernetes_namespace" "application_namespaces" {
   for_each = var.application_namespaces
-  
+
   metadata {
     name = each.key
     labels = merge(local.common_tags, {
@@ -948,7 +948,7 @@ resource "kubernetes_namespace" "application_namespaces" {
       "tenant" = lookup(each.value, "tenant", each.key)
     })
   }
-  
+
   depends_on = [
     helm_release.istiod,
     helm_release.ztunnel
@@ -961,18 +961,18 @@ resource "kubernetes_labels" "ambient_namespace_labels" {
     for ns_name, ns_config in var.application_namespaces : ns_name => ns_config
     if ns_config.dataplane_mode == "ambient"
   }
-  
+
   api_version = "v1"
   kind        = "Namespace"
-  
+
   metadata {
     name = each.key
   }
-  
+
   labels = {
     "istio.io/dataplane-mode" = "ambient"
   }
-  
+
   depends_on = [kubernetes_namespace.application_namespaces]
 }
 

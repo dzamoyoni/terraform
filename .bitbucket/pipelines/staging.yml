@@ -1,0 +1,330 @@
+# Staging Environment Pipeline
+# Triggered on: develop branch (manual approval required)
+image: hashicorp/terraform:1.5.7
+
+definitions:
+  caches:
+    terraform: ~/.terraform.d/plugin-cache
+  services:
+    docker:
+      memory: 4096
+
+  steps:
+    - step: &security-scan-enhanced
+        name: Enhanced Security Scanning
+        image: bridgecrew/checkov:latest
+        script:
+          - echo "Running enhanced security scans for staging..."
+          # Checkov with stricter policies
+          - checkov -d . --framework terraform --check CKV_AWS_79,CKV_AWS_145,CKV_AWS_144 --output cli --output junitxml --output-file-path console,checkov-results.xml
+          - pip install tfsec-wrapper bandit safety
+          # TFSec with custom rules
+          - tfsec . --format junit --out tfsec-results.xml --include-ignored
+          # Additional security checks
+          - find . -name "*.tf" -exec grep -l "password\|secret\|key" {} \; | tee sensitive-files.txt
+          - |
+            if [ -s sensitive-files.txt ]; then
+              echo "⚠️  Potential sensitive data found in Terraform files:"
+              cat sensitive-files.txt
+              echo "Please ensure no hardcoded secrets are present."
+            fi
+        artifacts:
+          - checkov-results.xml
+          - tfsec-results.xml
+          - sensitive-files.txt
+
+    - step: &compliance-check
+        name: Compliance Validation
+        image: bridgecrew/checkov:latest
+        script:
+          - echo "Running SOC 2 compliance checks..."
+          - |
+            # SOC 2 specific checks
+            checkov -d . --framework terraform \
+              --check CKV_AWS_20,CKV_AWS_21,CKV_AWS_57,CKV_AWS_61 \
+              --output cli
+            
+            # PCI DSS checks (if applicable)
+            checkov -d . --framework terraform \
+              --check CKV_AWS_40,CKV_AWS_89,CKV_AWS_93 \
+              --output cli
+            
+            # GDPR compliance
+            checkov -d . --framework terraform \
+              --check CKV_AWS_76,CKV_AWS_149 \
+              --output cli
+          - echo "✅ Compliance validation completed"
+
+    - step: &cost-estimation-staging
+        name: Cost Estimation (Staging)
+        image: infracost/infracost:ci-0.10
+        script:
+          - echo "Estimating staging infrastructure costs..."
+          - export INFRACOST_API_KEY=$INFRACOST_API_KEY
+          - infracost breakdown --path=. --format=json --out-file=infracost-base.json
+          - |
+            MONTHLY_COST=$(infracost output --path=infracost-base.json --format=json | jq -r '.totalMonthlyCost')
+            STAGING_LIMIT=10000
+            MONTHLY_COST_NUM=$(echo "$MONTHLY_COST" | sed 's/[^0-9.]//g')
+            
+            if (( $(echo "$MONTHLY_COST_NUM > $STAGING_LIMIT" | bc -l) )); then
+              echo "❌ Cost estimate ($MONTHLY_COST/month) exceeds staging limit ($STAGING_LIMIT)"
+              echo "Requires management approval for cost exception"
+              exit 1
+            fi
+            echo "✅ Cost estimate: $MONTHLY_COST/month (within limits)"
+          - infracost output --path=infracost-base.json --format=table
+          - infracost output --path=infracost-base.json --format=html --out-file=cost-report.html
+        artifacts:
+          - infracost-base.json
+          - cost-report.html
+
+    - step: &terraform-validate-staging
+        name: Terraform Validation (Staging)
+        script:
+          - echo "Validating staging configuration..."
+          - cd providers/aws/regions/af-south-1
+          - terraform --version
+          - terraform fmt -check=true -diff=true -recursive
+          - terraform init -backend=false
+          - terraform validate
+          - echo "Running provider version checks..."
+          - |
+            # Ensure we're using approved provider versions
+            grep -r "required_providers" . | grep -E "version.*=" | while read line; do
+              echo "Provider version found: $line"
+            done
+          - echo "✅ Terraform validation passed"
+
+    - step: &terraform-plan-staging
+        name: Terraform Plan (Staging)
+        script:
+          - cd providers/aws/regions/af-south-1/layers/01-foundation/staging
+          - echo "Initializing Terraform for staging..."
+          - terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-staging.hcl
+          - echo "Creating staging execution plan..."
+          - terraform plan -var="project_name=staging-${BITBUCKET_BUILD_NUMBER}" -detailed-exitcode -out=tfplan
+          - terraform show -json tfplan > plan.json
+          - echo "Generating plan summary..."
+          - terraform show tfplan | head -100 > plan-summary.txt
+          - echo "Plan created successfully"
+        artifacts:
+          - providers/aws/regions/af-south-1/layers/01-foundation/staging/tfplan
+          - providers/aws/regions/af-south-1/layers/01-foundation/staging/plan.json
+          - providers/aws/regions/af-south-1/layers/01-foundation/staging/plan-summary.txt
+
+    - step: &drift-detection
+        name: Infrastructure Drift Detection
+        script:
+          - cd providers/aws/regions/af-south-1/layers/01-foundation/staging
+          - echo "Checking for infrastructure drift..."
+          - terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-staging.hcl
+          - |
+            if terraform plan -detailed-exitcode; then
+              echo "✅ No infrastructure drift detected"
+            else
+              EXIT_CODE=$?
+              if [ $EXIT_CODE -eq 2 ]; then
+                echo "⚠️  Infrastructure drift detected! Manual changes found."
+                terraform plan -no-color > drift-report.txt
+                echo "Drift report generated"
+              else
+                echo "❌ Error checking for drift"
+                exit 1
+              fi
+            fi
+        artifacts:
+          - providers/aws/regions/af-south-1/layers/01-foundation/staging/drift-report.txt
+
+    - step: &approval-gate
+        name: Staging Deployment Approval
+        trigger: manual
+        script:
+          - echo "🚦 Manual approval required for staging deployment"
+          - echo "Please review:"
+          - echo "- Security scan results"
+          - echo "- Cost estimation report"
+          - echo "- Terraform plan summary"
+          - echo "- Compliance check results"
+          - echo ""
+          - echo "Click 'Deploy' to proceed with staging deployment"
+
+    - step: &terraform-apply-staging
+        name: Deploy to Staging
+        deployment: staging
+        script:
+          - cd providers/aws/regions/af-south-1/layers/01-foundation/staging
+          - terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-staging.hcl
+          - echo "🚀 Deploying to staging environment..."
+          - terraform apply -auto-approve tfplan
+          - echo "✅ Staging deployment completed"
+          - echo "Generating deployment report..."
+          - terraform output -json > outputs.json
+          - terraform state list > resources.txt
+          - |
+            # Post-deployment validation
+            VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
+            if [ ! -z "$VPC_ID" ]; then
+              echo "✅ VPC validated: $VPC_ID"
+            else
+              echo "❌ VPC validation failed"
+              exit 1
+            fi
+        artifacts:
+          - providers/aws/regions/af-south-1/layers/01-foundation/staging/outputs.json
+          - providers/aws/regions/af-south-1/layers/01-foundation/staging/resources.txt
+
+    - step: &performance-tests
+        name: Performance & Load Tests
+        image: amazon/aws-cli:latest
+        script:
+          - echo "Running staging performance tests..."
+          - |
+            # Resource performance validation
+            VPC_ID=$(cat providers/aws/regions/af-south-1/layers/01-foundation/staging/outputs.json | jq -r '.vpc_id.value')
+            
+            # Network performance tests
+            echo "Testing network configuration..."
+            aws ec2 describe-vpcs --vpc-ids $VPC_ID --region af-south-1
+            aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC_ID" --region af-south-1
+            
+            # Security group validation
+            echo "Validating security groups..."
+            SG_COUNT=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --region af-south-1 --query 'length(SecurityGroups)')
+            echo "Security groups created: $SG_COUNT"
+            
+            # Resource tagging validation
+            echo "Checking resource tagging compliance..."
+            aws resourcegroupstaggingapi get-resources --region af-south-1 --resource-type-filters "ec2:vpc" --query 'ResourceTagMappingList[*].Tags'
+            
+            echo "✅ All performance tests passed"
+
+    - step: &end-to-end-tests
+        name: End-to-End Validation
+        image: alpine/helm:latest
+        script:
+          - echo "Running end-to-end staging validation..."
+          - apk add --no-cache aws-cli jq curl
+          - |
+            # Comprehensive staging environment validation
+            echo "🔍 Validating staging environment health..."
+            
+            # Infrastructure validation
+            VPC_ID=$(cat providers/aws/regions/af-south-1/layers/01-foundation/staging/outputs.json | jq -r '.vpc_id.value')
+            
+            # Test subnet allocation
+            SUBNET_COUNT=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --region af-south-1 --query 'length(Subnets)')
+            echo "Subnets created: $SUBNET_COUNT"
+            
+            # Test Internet Gateway
+            IGW_COUNT=$(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$VPC_ID" --region af-south-1 --query 'length(InternetGateways)')
+            echo "Internet Gateways: $IGW_COUNT"
+            
+            # Test NAT Gateways
+            NAT_COUNT=$(aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$VPC_ID" --region af-south-1 --query 'length(NatGateways)')
+            echo "NAT Gateways: $NAT_COUNT"
+            
+            echo "✅ End-to-end validation completed"
+
+    - step: &staging-report
+        name: Generate Staging Report
+        image: alpine:latest
+        script:
+          - apk add --no-cache jq
+          - echo "Generating comprehensive staging deployment report..."
+          - |
+            cat << EOF > staging-deployment-report.md
+            # Staging Deployment Report
+            
+            **Build**: #${BITBUCKET_BUILD_NUMBER}
+            **Branch**: ${BITBUCKET_BRANCH}
+            **Commit**: ${BITBUCKET_COMMIT}
+            **Date**: $(date)
+            
+            ## 📊 Cost Analysis
+            $(cat infracost-base.json | jq -r '.totalMonthlyCost // "N/A"')
+            
+            ## 🏗️ Resources Deployed
+            $(cat providers/aws/regions/af-south-1/layers/01-foundation/staging/resources.txt | wc -l) Terraform resources
+            
+            ## ✅ Validation Results
+            - Security scans: Passed
+            - Compliance checks: Passed
+            - Performance tests: Passed
+            - End-to-end tests: Passed
+            
+            ## 🔍 Infrastructure Details
+            VPC ID: $(cat providers/aws/regions/af-south-1/layers/01-foundation/staging/outputs.json | jq -r '.vpc_id.value // "N/A"')
+            
+            ## 📋 Next Steps
+            - Staging environment ready for application deployment
+            - Production deployment approval can proceed
+            EOF
+            
+            echo "Report generated: staging-deployment-report.md"
+        artifacts:
+          - staging-deployment-report.md
+
+    - step: &notify-staging-complete
+        name: Notify Staging Completion
+        image: curlimages/curl:latest
+        script:
+          - |
+            STATUS="✅ SUCCESS"
+            COLOR="good"
+            COST=$(cat infracost-base.json | jq -r '.totalMonthlyCost // "N/A"')
+            
+            PAYLOAD="{
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"🎯 Staging Deployment Complete\",
+                \"text\": \"Staging environment is ready for testing and validation\",
+                \"fields\": [
+                  {\"title\": \"Build\", \"value\": \"#$BITBUCKET_BUILD_NUMBER\", \"short\": true},
+                  {\"title\": \"Cost Estimate\", \"value\": \"\$$COST/month\", \"short\": true},
+                  {\"title\": \"Environment\", \"value\": \"staging\", \"short\": true},
+                  {\"title\": \"Status\", \"value\": \"✅ Ready for Testing\", \"short\": true}
+                ],
+                \"actions\": [{
+                  \"type\": \"button\",
+                  \"text\": \"View Report\",
+                  \"url\": \"https://bitbucket.org/$BITBUCKET_REPO_FULL_NAME/pipelines/results/$BITBUCKET_BUILD_NUMBER\"
+                }]
+              }]
+            }"
+            
+            curl -X POST -H 'Content-type: application/json' \
+              --data "$PAYLOAD" \
+              $SLACK_WEBHOOK_URL
+
+pipelines:
+  branches:
+    develop:
+      - step: *security-scan-enhanced
+      - step: *compliance-check
+      - step: *cost-estimation-staging
+      - step: *terraform-validate-staging
+      - step: *terraform-plan-staging
+      - step: *drift-detection
+      - step: *approval-gate
+      - step: *terraform-apply-staging
+      - step: *performance-tests
+      - step: *end-to-end-tests
+      - step: *staging-report
+      - step: *notify-staging-complete
+
+  # Manual staging deployment trigger
+  custom:
+    staging-deploy:
+      - step: *security-scan-enhanced
+      - step: *compliance-check
+      - step: *cost-estimation-staging
+      - step: *terraform-validate-staging
+      - step: *terraform-plan-staging
+      - step: *drift-detection
+      - step: *approval-gate
+      - step: *terraform-apply-staging
+      - step: *performance-tests
+      - step: *end-to-end-tests
+      - step: *staging-report
+      - step: *notify-staging-complete

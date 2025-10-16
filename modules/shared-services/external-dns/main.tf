@@ -63,8 +63,8 @@ variable "tags" {
 # IAM Role for External DNS (conditional creation)
 resource "aws_iam_role" "external_dns" {
   count = var.external_irsa_role_arn == null ? 1 : 0
-  name = "${var.cluster_name}-external-dns-role"
-  
+  name  = "${var.cluster_name}-external-dns-role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -83,7 +83,7 @@ resource "aws_iam_role" "external_dns" {
       }
     ]
   })
-  
+
   tags = merge(var.tags, {
     Name    = "${var.cluster_name}-external-dns-role"
     Purpose = "External DNS IRSA Role"
@@ -92,10 +92,10 @@ resource "aws_iam_role" "external_dns" {
 
 # IAM Policy for External DNS (conditional creation)
 resource "aws_iam_policy" "external_dns" {
-  count = var.external_irsa_role_arn == null ? 1 : 0
+  count       = var.external_irsa_role_arn == null ? 1 : 0
   name        = "${var.cluster_name}-ExternalDNSPolicy"
   description = "Policy for External DNS to manage Route53 records"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -117,7 +117,7 @@ resource "aws_iam_policy" "external_dns" {
       }
     ]
   })
-  
+
   tags = merge(var.tags, {
     Name    = "${var.cluster_name}-ExternalDNSPolicy"
     Purpose = "External DNS IAM Policy"
@@ -126,7 +126,7 @@ resource "aws_iam_policy" "external_dns" {
 
 # Attach policy to role (conditional)
 resource "aws_iam_role_policy_attachment" "external_dns" {
-  count = var.external_irsa_role_arn == null ? 1 : 0
+  count      = var.external_irsa_role_arn == null ? 1 : 0
   policy_arn = aws_iam_policy.external_dns[0].arn
   role       = aws_iam_role.external_dns[0].name
 }
@@ -141,11 +141,11 @@ resource "kubernetes_service_account" "external_dns" {
   metadata {
     name      = var.service_account_name
     namespace = "kube-system"
-    
+
     annotations = {
       "eks.amazonaws.com/role-arn" = local.external_dns_role_arn
     }
-    
+
     labels = {
       "app.kubernetes.io/name"       = "external-dns"
       "app.kubernetes.io/component"  = "controller"
@@ -162,32 +162,32 @@ resource "helm_release" "external_dns" {
   chart      = "external-dns"
   version    = var.helm_chart_version
   namespace  = "kube-system"
-  
+
   set {
     name  = "provider"
     value = "aws"
   }
-  
+
   set {
     name  = "aws.region"
     value = var.region
   }
-  
+
   set {
     name  = "policy"
     value = var.policy
   }
-  
+
   set {
     name  = "registry"
     value = "txt"
   }
-  
+
   set {
     name  = "txtOwnerId"
     value = "${var.cluster_name}-external-dns"
   }
-  
+
   # Domain filters
   dynamic "set" {
     for_each = var.domain_filters
@@ -196,38 +196,38 @@ resource "helm_release" "external_dns" {
       value = set.value
     }
   }
-  
+
   set {
     name  = "serviceAccount.create"
     value = "false"
   }
-  
+
   set {
     name  = "serviceAccount.name"
     value = var.service_account_name
   }
-  
+
   # Resource management
   set {
     name  = "resources.requests.cpu"
     value = "10m"
   }
-  
+
   set {
     name  = "resources.requests.memory"
     value = "50Mi"
   }
-  
+
   set {
     name  = "resources.limits.cpu"
     value = "50m"
   }
-  
+
   set {
     name  = "resources.limits.memory"
     value = "100Mi"
   }
-  
+
   depends_on = [
     kubernetes_service_account.external_dns
   ]

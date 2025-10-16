@@ -1,0 +1,92 @@
+# ============================================================================
+# Centralized Tagging Configuration
+# ============================================================================
+
+module "tags" {
+  source = "../../../../../../../modules/tagging"
+  
+  # Core configuration
+  project_name     = var.project_name
+  environment      = var.environment
+  layer_name       = "06-shared-services"
+  region           = var.region
+  
+  # Layer-specific configuration
+  layer_purpose    = "Shared Infrastructure Services"
+  deployment_phase = "Phase-6"
+  
+  # Infrastructure classification
+  critical_infrastructure = "true"
+  backup_required        = "true"
+  security_level         = "High"
+  
+  # Cost management
+  cost_center      = "IT-Infrastructure"
+  billing_group    = "Platform-Engineering"
+  chargeback_code  = "CPTWN-06SHAREDSERVICES-001"
+  
+  # Operational settings
+  sla_tier           = "Gold"
+  monitoring_level   = "Enhanced"
+  maintenance_window = "Sunday-02:00-04:00-UTC"
+  
+  # Governance
+  compliance_framework = "SOC2-ISO27001"
+  data_classification  = "Internal"
+  
+  # Shared services settings
+  additional_tags = {
+    ServiceType     = "Shared"
+    ResourceScope   = "Multi-Tenant"
+    ServiceTier     = "Platform"
+  }
+}
+
+# Provider configuration with standardized default tags
+provider "aws" {
+  region = var.region
+
+  default_tags {
+    tags = module.tags.standard_tags
+  }
+}
+
+# ============================================================================
+# Locals for Tag Management
+# ============================================================================
+
+locals {
+  # Standard tags for most resources
+  common_tags = module.tags.standard_tags
+  
+  # Comprehensive tags for critical infrastructure
+  critical_tags = module.tags.comprehensive_tags
+  
+  # Minimal tags for cost-sensitive resources
+  minimal_tags = module.tags.minimal_tags
+  
+  # Client-specific tags for multi-tenant resources (if applicable)
+  client_tags = {
+    "mtn-ghana-prod" = merge(
+      module.tags.standard_tags,
+      {
+        Client     = "mtn-ghana-prod"
+        ClientCode = "MTN-GH"
+        ClientTier = "Premium"
+        TenantType = "Production"
+      }
+    )
+    "orange-madagascar-prod" = merge(
+      module.tags.standard_tags,
+      {
+        Client     = "orange-madagascar-prod"
+        ClientCode = "OMG-MD"
+        ClientTier = "Premium"
+        TenantType = "Production"
+      }
+    )
+  }
+  
+  # Kubernetes labels (if applicable)
+  kubernetes_labels = module.tags.kubernetes_labels
+}

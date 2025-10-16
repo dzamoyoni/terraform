@@ -44,7 +44,7 @@ variable "nlb_scheme" {
   description = "Scheme for NLB (internet-facing or internal)"
   type        = string
   default     = "internet-facing"
-  
+
   validation {
     condition     = contains(["internet-facing", "internal"], var.nlb_scheme)
     error_message = "NLB scheme must be either 'internet-facing' or 'internal'."

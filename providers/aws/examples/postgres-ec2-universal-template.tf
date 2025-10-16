@@ -16,7 +16,7 @@
 
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -32,14 +32,14 @@ terraform {
 
 # Configure AWS Provider for any region
 provider "aws" {
-  region = var.aws_region  # Set via terraform.tfvars or environment
-  
+  region = var.aws_region # Set via terraform.tfvars or environment
+
   default_tags {
     tags = {
-      Environment   = var.environment
-      ManagedBy    = "terraform"
-      Module       = "postgres-ec2"
-      Region       = var.aws_region
+      Environment = var.environment
+      ManagedBy   = "terraform"
+      Module      = "postgres-ec2"
+      Region      = var.aws_region
     }
   }
 }
@@ -82,18 +82,18 @@ variable "key_name" {
 variable "clients" {
   description = "Client configurations for PostgreSQL databases"
   type = map(object({
-    database_name        = string
-    database_user        = string
-    database_password    = string
-    replication_password = string
-    instance_type_master = optional(string, "r5.large")
+    database_name         = string
+    database_user         = string
+    database_password     = string
+    replication_password  = string
+    instance_type_master  = optional(string, "r5.large")
     instance_type_replica = optional(string, "r5.large")
-    data_volume_size     = optional(number, 100)
-    data_volume_type     = optional(string, "gp3")
-    data_volume_iops     = optional(number, 3000)
+    data_volume_size      = optional(number, 100)
+    data_volume_type      = optional(string, "gp3")
+    data_volume_iops      = optional(number, 3000)
     backup_retention_days = optional(number, 7)
-    allowed_cidrs        = list(string)
-    tags                 = optional(map(string), {})
+    allowed_cidrs         = list(string)
+    tags                  = optional(map(string), {})
   }))
 }
 
@@ -141,18 +141,18 @@ data "aws_subnet" "private_subnets" {
 locals {
   # Region-specific configuration
   region_name = data.aws_region.current.name
-  
+
   # Ensure we have subnets in different AZs for HA
   subnet_az_map = {
     for idx, subnet in data.aws_subnet.private_subnets :
     subnet.availability_zone => subnet.id
   }
-  
+
   # Get first two different AZs for master/replica placement
   availability_zones = keys(local.subnet_az_map)
-  master_az         = local.availability_zones[0]
-  replica_az        = length(local.availability_zones) > 1 ? local.availability_zones[1] : local.availability_zones[0]
-  
+  master_az          = local.availability_zones[0]
+  replica_az         = length(local.availability_zones) > 1 ? local.availability_zones[1] : local.availability_zones[0]
+
   # Common tags for all resources
   common_tags = {
     Region      = local.region_name
@@ -168,46 +168,46 @@ locals {
 # ============================================================================
 
 module "client_databases" {
-  source = "../modules/postgres-ec2"  # Adjust path based on your structure
-  
+  source = "../modules/postgres-ec2" # Adjust path based on your structure
+
   for_each = var.clients
-  
+
   # Client identification
   client_name = each.key
   environment = var.environment
-  
+
   # Network configuration - automatically uses different AZs
   vpc_id            = var.vpc_id
   master_subnet_id  = local.subnet_az_map[local.master_az]
   replica_subnet_id = local.subnet_az_map[local.replica_az]
-  
+
   # Instance configuration - region-appropriate AMI
   ami_id                = data.aws_ami.ubuntu.id
   key_name              = var.key_name
   master_instance_type  = each.value.instance_type_master
   replica_instance_type = each.value.instance_type_replica
-  
+
   # PostgreSQL configuration
-  postgres_version     = "15"  # Latest stable version
+  postgres_version     = "15" # Latest stable version
   database_name        = each.value.database_name
   database_user        = each.value.database_user
   database_password    = each.value.database_password
   replication_password = each.value.replication_password
-  
+
   # Storage configuration
   data_volume_size = each.value.data_volume_size
   data_volume_type = each.value.data_volume_type
   data_volume_iops = each.value.data_volume_iops
-  
+
   # Security configuration
-  enable_encryption = true
-  allowed_cidr_blocks = each.value.allowed_cidrs
+  enable_encryption      = true
+  allowed_cidr_blocks    = each.value.allowed_cidrs
   management_cidr_blocks = [data.aws_vpc.selected.cidr_block]
-  
+
   # Monitoring and backup
-  enable_monitoring       = true
-  backup_retention_days   = each.value.backup_retention_days
-  
+  enable_monitoring     = true
+  backup_retention_days = each.value.backup_retention_days
+
   # Tags - merge common tags with client-specific tags
   tags = merge(
     local.common_tags,
@@ -227,10 +227,10 @@ output "database_endpoints" {
   description = "Database connection endpoints for all clients"
   value = {
     for client_name, db in module.client_databases : client_name => {
-      master_endpoint  = db.master_endpoint
-      replica_endpoint = db.replica_endpoint
-      database_port    = db.database_port
-      database_name    = db.database_name
+      master_endpoint     = db.master_endpoint
+      replica_endpoint    = db.replica_endpoint
+      database_port       = db.database_port
+      database_name       = db.database_name
       master_instance_id  = db.master_instance_id
       replica_instance_id = db.replica_instance_id
       security_group_id   = db.security_group_id
@@ -242,12 +242,12 @@ output "database_endpoints" {
 output "deployment_summary" {
   description = "Summary of the PostgreSQL deployment"
   value = {
-    region              = local.region_name
-    environment         = var.environment
-    total_clients       = length(var.clients)
-    master_az          = local.master_az
-    replica_az         = local.replica_az
-    high_availability  = local.master_az != local.replica_az
+    region            = local.region_name
+    environment       = var.environment
+    total_clients     = length(var.clients)
+    master_az         = local.master_az
+    replica_az        = local.replica_az
+    high_availability = local.master_az != local.replica_az
   }
 }
 

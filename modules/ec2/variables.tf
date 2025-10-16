@@ -194,7 +194,7 @@ variable "cpu_credits" {
   type        = string
   default     = ""
   validation {
-    condition = var.cpu_credits == "" || contains(["standard", "unlimited"], var.cpu_credits)
+    condition     = var.cpu_credits == "" || contains(["standard", "unlimited"], var.cpu_credits)
     error_message = "CPU credits must be either empty, 'standard', or 'unlimited'."
   }
 }

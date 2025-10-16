@@ -74,16 +74,16 @@ output "tunnel2_vgw_inside_address" {
 output "vpn_summary" {
   description = "Summary of VPN infrastructure created"
   value = var.enabled ? {
-    customer_gateway_id     = aws_customer_gateway.main[0].id
-    vpn_gateway_id         = aws_vpn_gateway.main[0].id
-    vpn_connection_id      = aws_vpn_connection.main[0].id
-    tunnel1_address        = aws_vpn_connection.main[0].tunnel1_address
-    tunnel2_address        = aws_vpn_connection.main[0].tunnel2_address
-    static_routes_only     = var.static_routes_only
-    onprem_cidr_blocks     = var.onprem_cidr_blocks
-    bgp_asn               = var.bgp_asn
-    amazon_side_asn       = var.amazon_side_asn
-    vpn_logging_enabled   = var.enable_vpn_logging
+    customer_gateway_id = aws_customer_gateway.main[0].id
+    vpn_gateway_id      = aws_vpn_gateway.main[0].id
+    vpn_connection_id   = aws_vpn_connection.main[0].id
+    tunnel1_address     = aws_vpn_connection.main[0].tunnel1_address
+    tunnel2_address     = aws_vpn_connection.main[0].tunnel2_address
+    static_routes_only  = var.static_routes_only
+    onprem_cidr_blocks  = var.onprem_cidr_blocks
+    bgp_asn             = var.bgp_asn
+    amazon_side_asn     = var.amazon_side_asn
+    vpn_logging_enabled = var.enable_vpn_logging
   } : null
 }
 

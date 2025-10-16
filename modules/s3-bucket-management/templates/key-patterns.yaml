@@ -1,0 +1,196 @@
+# ============================================================================
+# S3 Key Structure Patterns - Enterprise Standards
+# ============================================================================
+# This file contains predefined S3 key structure patterns for different
+# data types. These patterns optimize storage organization, query performance,
+# and lifecycle management.
+# ============================================================================
+
+# Application Logs Pattern
+# Best for: Fluent Bit, application logs, container logs
+logs_pattern:
+  structure: "logs/cluster=${cluster_name}/tenant=${tenant}/service=${service}/year=%Y/month=%m/day=%d/hour=%H/"
+  filename: "fluent-bit-logs-%Y%m%d-%H%M%S-$UUID.gz"
+  full_pattern: "logs/cluster=${cluster_name}/tenant=${tenant}/service=${service}/year=%Y/month=%m/day=%d/hour=%H/fluent-bit-logs-%Y%m%d-%H%M%S-$UUID.gz"
+  use_cases:
+    - Container logs from Kubernetes
+    - Application stdout/stderr
+    - System service logs
+    - Debug and error logs
+  query_optimization:
+    - Time-based queries (year/month/day/hour)
+    - Tenant isolation for multi-tenant clusters
+    - Service-level log analysis
+  lifecycle_strategy:
+    - Standard -> IA after 30 days
+    - IA -> Glacier after 90 days
+    - Retention: 90-365 days typical
+
+# Distributed Traces Pattern  
+# Best for: Tempo, Jaeger, OpenTelemetry traces
+traces_pattern:
+  structure: "traces/cluster=${cluster_name}/tenant=${tenant}/service=${service}/year=%Y/month=%m/day=%d/hour=%H/"
+  filename: "tempo-traces-%Y%m%d-%H%M%S-$UUID.gz"
+  full_pattern: "traces/cluster=${cluster_name}/tenant=${tenant}/service=${service}/year=%Y/month=%m/day=%d/hour=%H/tempo-traces-%Y%m%d-%H%M%S-$UUID.gz"
+  use_cases:
+    - Distributed tracing data
+    - Request flow analysis
+    - Performance monitoring
+    - Service dependency mapping
+  query_optimization:
+    - Trace ID lookups
+    - Service performance analysis
+    - Time-range queries
+    - Cross-service correlation
+  lifecycle_strategy:
+    - Standard -> IA after 30 days
+    - IA -> Glacier after 60 days (faster than logs)
+    - Retention: 30-90 days typical
+
+# Database Backups Pattern
+# Best for: PostgreSQL dumps, MongoDB backups, data exports
+backups_pattern:
+  structure: "backups/database=${database_name}/backup_type=${backup_type}/year=%Y/month=%m/day=%d/"
+  filename: "db-backup-%Y%m%d-%H%M%S-$UUID.tar.gz"
+  full_pattern: "backups/database=${database_name}/backup_type=${backup_type}/year=%Y/month=%m/day=%d/db-backup-%Y%m%d-%H%M%S-$UUID.tar.gz"
+  use_cases:
+    - Full database backups
+    - Incremental backups
+    - Schema exports
+    - Point-in-time recovery files
+  query_optimization:
+    - Database-specific restore
+    - Backup type filtering (full/incremental)
+    - Time-based recovery points
+  lifecycle_strategy:
+    - Standard -> IA after 30 days
+    - IA -> Glacier after 90 days
+    - Retention: 7 years for compliance
+
+# Metrics and Time Series Data Pattern
+# Best for: Prometheus metrics, custom metrics, performance data
+metrics_pattern:
+  structure: "metrics/cluster=${cluster_name}/metric_type=${metric_type}/year=%Y/month=%m/day=%d/hour=%H/"
+  filename: "metrics-%Y%m%d-%H%M%S-$UUID.json.gz"
+  full_pattern: "metrics/cluster=${cluster_name}/metric_type=${metric_type}/year=%Y/month=%m/day=%d/hour=%H/metrics-%Y%m%d-%H%M%S-$UUID.json.gz"
+  use_cases:
+    - Prometheus time series data
+    - Application metrics
+    - Infrastructure monitoring data
+    - Custom business metrics
+  query_optimization:
+    - Metric type analysis
+    - Time-range aggregations
+    - Cluster-specific metrics
+    - Performance trending
+  lifecycle_strategy:
+    - Intelligent tiering enabled
+    - Standard -> IA after 30 days
+    - IA -> Glacier after 90 days
+    - Retention: 90-180 days typical
+
+# Audit Logs Pattern
+# Best for: Kubernetes audit logs, security events, compliance logs
+audit_logs_pattern:
+  structure: "audit-logs/cluster=${cluster_name}/component=${component}/year=%Y/month=%m/day=%d/hour=%H/"
+  filename: "audit-%Y%m%d-%H%M%S-$UUID.json.gz"
+  full_pattern: "audit-logs/cluster=${cluster_name}/component=${component}/year=%Y/month=%m/day=%d/hour=%H/audit-%Y%m%d-%H%M%S-$UUID.json.gz"
+  use_cases:
+    - Kubernetes API audit logs
+    - Security event logging
+    - Compliance audit trails
+    - User activity tracking
+  query_optimization:
+    - Component-specific audits
+    - Time-based compliance queries
+    - Security incident investigation
+    - User activity analysis
+  lifecycle_strategy:
+    - Standard -> IA after 30 days
+    - IA -> Glacier after 365 days
+    - Retention: 7 years for compliance
+
+# Application Data Pattern
+# Best for: Application exports, data processing results, reports
+application_data_pattern:
+  structure: "application-data/tenant=${tenant}/app=${app_name}/data_type=${data_type}/year=%Y/month=%m/day=%d/"
+  filename: "app-data-%Y%m%d-%H%M%S-$UUID.parquet"
+  full_pattern: "application-data/tenant=${tenant}/app=${app_name}/data_type=${data_type}/year=%Y/month=%m/day=%d/app-data-%Y%m%d-%H%M%S-$UUID.parquet"
+  use_cases:
+    - ETL process outputs
+    - Data warehouse exports
+    - Report generation results
+    - Analytics datasets
+  query_optimization:
+    - Tenant-specific data access
+    - Application-level analysis
+    - Data type categorization
+    - Time-series analysis
+  lifecycle_strategy:
+    - Intelligent tiering enabled
+    - Standard -> IA after 30 days
+    - IA -> Glacier after 180 days
+    - Retention: varies by compliance requirements
+
+# Error and Exception Logs Pattern
+# Best for: Error tracking, exception handling, crash dumps
+error_logs_pattern:
+  structure: "error-logs/cluster=${cluster_name}/tenant=${tenant}/severity=${severity}/year=%Y/month=%m/day=%d/hour=%H/"
+  filename: "error-log-%Y%m%d-%H%M%S-$UUID.json.gz"
+  full_pattern: "error-logs/cluster=${cluster_name}/tenant=${tenant}/severity=${severity}/year=%Y/month=%m/day=%d/hour=%H/error-log-%Y%m%d-%H%M%S-$UUID.json.gz"
+  use_cases:
+    - Application error tracking
+    - Exception analysis
+    - Crash dump storage
+    - Debug information
+  query_optimization:
+    - Severity-based filtering
+    - Error pattern analysis
+    - Tenant-specific debugging
+    - Time-based incident correlation
+  lifecycle_strategy:
+    - Standard -> IA after 7 days
+    - IA -> Glacier after 30 days
+    - Retention: 90 days typical
+
+# Security Events Pattern
+# Best for: Security alerts, intrusion detection, vulnerability scans
+security_events_pattern:
+  structure: "security-events/cluster=${cluster_name}/event_type=${event_type}/severity=${severity}/year=%Y/month=%m/day=%d/hour=%H/"
+  filename: "security-event-%Y%m%d-%H%M%S-$UUID.json.gz"
+  full_pattern: "security-events/cluster=${cluster_name}/event_type=${event_type}/severity=${severity}/year=%Y/month=%m/day=%d/hour=%H/security-event-%Y%m%d-%H%M%S-$UUID.json.gz"
+  use_cases:
+    - Security incident logging
+    - Intrusion detection alerts
+    - Vulnerability scan results
+    - Threat intelligence data
+  query_optimization:
+    - Event type analysis
+    - Severity-based investigations
+    - Time-based incident tracking
+    - Cross-cluster security analysis
+  lifecycle_strategy:
+    - Standard -> IA after 90 days
+    - IA -> Glacier after 365 days
+    - Retention: 7 years for compliance
+
+# Configuration and State Data Pattern
+# Best for: Configuration backups, state snapshots, infrastructure as code
+config_state_pattern:
+  structure: "config-state/cluster=${cluster_name}/component=${component}/state_type=${state_type}/year=%Y/month=%m/day=%d/"
+  filename: "config-state-%Y%m%d-%H%M%S-$UUID.json.gz"
+  full_pattern: "config-state/cluster=${cluster_name}/component=${component}/state_type=${state_type}/year=%Y/month=%m/day=%d/config-state-%Y%m%d-%H%M%S-$UUID.json.gz"
+  use_cases:
+    - Kubernetes resource backups
+    - Configuration snapshots
+    - Infrastructure state
+    - Deployment artifacts
+  query_optimization:
+    - Component-specific configurations
+    - State type analysis
+    - Time-based configuration drift
+    - Rollback point identification
+  lifecycle_strategy:
+    - Standard -> IA after 30 days
+    - IA -> Glacier after 180 days
+    - Retention: 2 years typical

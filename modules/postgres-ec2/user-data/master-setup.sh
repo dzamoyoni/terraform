@@ -278,25 +278,25 @@ sudo -u postgres psql -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS pg_stat_s
 log "Setting up automated backups"
 
 # Create backup script
-cat > /usr/local/bin/postgresql-backup.sh << 'EOF'
+cat > /usr/local/bin/postgresql-backup.sh << EOF
 #!/bin/bash
 set -euo pipefail
 
 BACKUP_DIR="/var/backups/postgresql/dumps"
-RETENTION_DAYS=${BACKUP_RETENTION}
-DB_NAME="${DB_NAME}"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+RETENTION_DAYS=${backup_retention}
+DB_NAME="${db_name}"
+TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
 
-mkdir -p "$BACKUP_DIR"
+mkdir -p "\$BACKUP_DIR"
 
 # Full database backup
-pg_dump -U postgres -d "$DB_NAME" | gzip > "$BACKUP_DIR/${DB_NAME}_${TIMESTAMP}.sql.gz"
+pg_dump -U postgres -d "\$DB_NAME" | gzip > "\$BACKUP_DIR/\$DB_NAME\_\$TIMESTAMP.sql.gz"
 
 # Cleanup old backups
-find "$BACKUP_DIR" -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete
+find "\$BACKUP_DIR" -name "*.sql.gz" -mtime +\$RETENTION_DAYS -delete
 
 # Log backup completion
-logger "PostgreSQL backup completed for $DB_NAME"
+logger "PostgreSQL backup completed for \$DB_NAME"
 EOF
 
 chmod +x /usr/local/bin/postgresql-backup.sh

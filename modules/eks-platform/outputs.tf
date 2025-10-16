@@ -1,5 +1,5 @@
-# 🏗️ CPTWN EKS Cluster Wrapper Module - Outputs
-# Standardized outputs for consistent integration across all CPTWN layers
+# EKS Cluster Wrapper Module - Outputs
+# Standardized outputs for consistent integration across all infrastructure layers
 
 # ☸️ CLUSTER INFORMATION
 output "cluster_arn" {
@@ -63,7 +63,7 @@ output "cluster_version" {
   value       = module.eks.cluster_version
 }
 
-# 🔐 SECURITY AND ACCESS
+#  SECURITY AND ACCESS
 output "cluster_tls_certificate_sha1_fingerprint" {
   description = "The SHA1 fingerprint of the public key of the cluster's certificate"
   value       = module.eks.cluster_tls_certificate_sha1_fingerprint
@@ -74,7 +74,12 @@ output "oidc_provider_arn" {
   value       = module.eks.oidc_provider_arn
 }
 
-# 🏷️ NODE GROUPS
+output "ebs_csi_irsa_role_arn" {
+  description = "IAM role ARN for the EBS CSI driver service account"
+  value       = module.ebs_csi_irsa_role.iam_role_arn
+}
+
+# NODE GROUPS
 output "eks_managed_node_groups" {
   description = "Map of attribute maps for all EKS managed node groups created"
   value       = module.eks.eks_managed_node_groups
@@ -95,26 +100,26 @@ output "node_security_group_id" {
   value       = module.eks.node_security_group_id
 }
 
-# CPTWN PLATFORM SUMMARY
+# PLATFORM SUMMARY
 output "platform_summary" {
-  description = "Comprehensive summary of the CPTWN EKS platform deployment"
+  description = "Comprehensive summary of the EKS platform deployment"
   value = {
     # Cluster information
     cluster_name    = module.eks.cluster_name
     cluster_version = module.eks.cluster_version
     cluster_region  = var.region
     environment     = var.environment
-    
+
     # Network configuration
-    vpc_id            = var.vpc_id
-    platform_subnets  = length(var.platform_subnet_ids)
-    
+    vpc_id           = var.vpc_id
+    platform_subnets = length(var.platform_subnet_ids)
+
     # Security configuration  
     endpoint_access = {
       public  = var.enable_public_access
       private = true
     }
-    
+
     # Features enabled
     addons_enabled = {
       coredns            = true
@@ -123,36 +128,36 @@ output "platform_summary" {
       ebs_csi_driver     = true
       pod_identity_agent = true
     }
-    
+
     logging_enabled = true
     irsa_enabled    = true
-    
+
     # Node groups summary
     node_groups_enabled = {
       for name, config in var.node_groups : name => {
-        client       = config.client
+        client         = config.client
         instance_types = config.instance_types
-        capacity     = "${config.min_size}-${config.max_size}"
-        desired      = config.desired_size
+        capacity       = "${config.min_size}-${config.max_size}"
+        desired        = config.desired_size
       }
     }
-    
-    # CPTWN standards applied
-    cptwn_standards = {
-      naming_convention   = "applied"
-      tagging_standards   = "applied"
-      security_hardening  = "applied"
-      monitoring_enabled  = "applied"
-      backup_configured   = "applied"
+
+    # Infrastructure standards applied
+    infrastructure_standards = {
+      naming_convention  = "applied"
+      tagging_standards  = "applied"
+      security_hardening = "applied"
+      monitoring_enabled = "applied"
+      backup_configured  = "applied"
     }
   }
 }
 
-# 🔒 SECURITY NOTICE
+# SECURITY NOTICE
 output "security_notice" {
   description = "Important security information for the EKS cluster"
   value = {
-    message = "CPTWN EKS Cluster deployed with security best practices"
+    message = "EKS Cluster deployed with security best practices"
     actions_required = [
       "Configure kubectl access using: aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name}",
       "Verify node groups are healthy: kubectl get nodes",

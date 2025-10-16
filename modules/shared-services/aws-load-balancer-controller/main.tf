@@ -3,8 +3,8 @@
 # IAM Role for AWS Load Balancer Controller (conditional creation)
 resource "aws_iam_role" "aws_load_balancer_controller" {
   count = var.external_irsa_role_arn == null ? 1 : 0
-  name = "${var.cluster_name}-aws-load-balancer-controller-role"
-  
+  name  = "${var.cluster_name}-aws-load-balancer-controller-role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -23,7 +23,7 @@ resource "aws_iam_role" "aws_load_balancer_controller" {
       }
     ]
   })
-  
+
   tags = merge(var.tags, {
     Name    = "${var.cluster_name}-aws-load-balancer-controller-role"
     Purpose = "AWS Load Balancer Controller IRSA Role"
@@ -32,12 +32,12 @@ resource "aws_iam_role" "aws_load_balancer_controller" {
 
 # IAM Policy for AWS Load Balancer Controller (conditional creation)
 resource "aws_iam_policy" "aws_load_balancer_controller" {
-  count = var.external_irsa_role_arn == null ? 1 : 0
+  count       = var.external_irsa_role_arn == null ? 1 : 0
   name        = "${var.cluster_name}-AWSLoadBalancerControllerPolicy"
   description = "Policy for AWS Load Balancer Controller"
-  
+
   policy = data.aws_iam_policy_document.aws_load_balancer_controller.json
-  
+
   tags = merge(var.tags, {
     Name    = "${var.cluster_name}-AWSLoadBalancerControllerPolicy"
     Purpose = "AWS Load Balancer Controller IAM Policy"
@@ -223,7 +223,7 @@ data "aws_iam_policy_document" "aws_load_balancer_controller" {
 
 # Attach policy to role (conditional)
 resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
-  count = var.external_irsa_role_arn == null ? 1 : 0
+  count      = var.external_irsa_role_arn == null ? 1 : 0
   policy_arn = aws_iam_policy.aws_load_balancer_controller[0].arn
   role       = aws_iam_role.aws_load_balancer_controller[0].name
 }
@@ -238,11 +238,11 @@ resource "kubernetes_service_account" "aws_load_balancer_controller" {
   metadata {
     name      = var.service_account_name
     namespace = "kube-system"
-    
+
     annotations = {
       "eks.amazonaws.com/role-arn" = local.alb_controller_role_arn
     }
-    
+
     labels = {
       "app.kubernetes.io/name"       = "aws-load-balancer-controller"
       "app.kubernetes.io/component"  = "controller"
@@ -259,53 +259,100 @@ resource "helm_release" "aws_load_balancer_controller" {
   chart      = "aws-load-balancer-controller"
   version    = var.helm_chart_version
   namespace  = "kube-system"
-  
+
   set {
     name  = "clusterName"
     value = var.cluster_name
   }
-  
+
   set {
     name  = "serviceAccount.create"
     value = "false"
   }
-  
+
   set {
     name  = "serviceAccount.name"
     value = var.service_account_name
   }
-  
+
   set {
     name  = "region"
     value = var.region
   }
-  
+
   set {
     name  = "vpcId"
     value = var.vpc_id
   }
-  
+
   # Resource management for better performance and stability
   set {
     name  = "resources.requests.cpu"
     value = "100m"
   }
-  
+
   set {
     name  = "resources.requests.memory"
     value = "128Mi"
   }
-  
+
   set {
     name  = "resources.limits.cpu"
     value = "200m"
   }
-  
+
   set {
     name  = "resources.limits.memory"
     value = "256Mi"
   }
-  
+
+  # Tolerations for system node group taints
+  set {
+    name  = "tolerations[0].key"
+    value = "workload-type"
+  }
+
+  set {
+    name  = "tolerations[0].operator"
+    value = "Equal"
+  }
+
+  set {
+    name  = "tolerations[0].value"
+    value = "system"
+  }
+
+  set {
+    name  = "tolerations[0].effect"
+    value = "NoSchedule"
+  }
+
+  set {
+    name  = "tolerations[1].key"
+    value = "dedicated"
+  }
+
+  set {
+    name  = "tolerations[1].operator"
+    value = "Equal"
+  }
+
+  set {
+    name  = "tolerations[1].value"
+    value = "shared-services"
+  }
+
+  set {
+    name  = "tolerations[1].effect"
+    value = "NoSchedule"
+  }
+
+  # Node selector to prefer system nodes
+  set {
+    name  = "nodeSelector.workload-type"
+    value = "system"
+  }
+
   depends_on = [
     kubernetes_service_account.aws_load_balancer_controller
   ]

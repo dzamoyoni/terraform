@@ -31,7 +31,7 @@ locals {
 
   # Mode validation
   mode_name = local.is_import_mode ? "IMPORT" : "CREATE"
-  
+
   # Common configuration
   common_tags = merge(var.common_tags, {
     FoundationMode = local.mode_name
@@ -43,7 +43,7 @@ locals {
 # Validation checks
 resource "null_resource" "mode_validation" {
   count = local.is_import_mode && var.existing_vpc_id == "" ? 1 : 0
-  
+
   provisioner "local-exec" {
     command = "echo 'ERROR: Import mode requires existing_vpc_id' && exit 1"
   }
@@ -71,7 +71,7 @@ data "aws_subnet" "existing_public" {
 
 data "aws_internet_gateway" "existing" {
   count = local.is_import_mode && var.existing_igw_id != "" ? 1 : 0
-  
+
   filter {
     name   = "attachment.vpc-id"
     values = [var.existing_vpc_id]
@@ -146,32 +146,32 @@ locals {
   # VPC information (unified from both modes)
   vpc_id         = local.is_import_mode ? data.aws_vpc.existing[0].id : module.vpc[0].vpc_id
   vpc_cidr_block = local.is_import_mode ? data.aws_vpc.existing[0].cidr_block : module.vpc[0].vpc_cidr_block
-  
+
   # Subnet information (unified)
   private_subnet_ids = local.is_import_mode ? var.existing_private_subnet_ids : module.vpc[0].private_subnets
   public_subnet_ids  = local.is_import_mode ? var.existing_public_subnet_ids : module.vpc[0].public_subnets
-  
+
   private_subnet_cidrs = local.is_import_mode ? [
     for subnet in data.aws_subnet.existing_private : subnet.cidr_block
   ] : module.vpc[0].private_subnets_cidr_blocks
-  
+
   public_subnet_cidrs = local.is_import_mode ? [
     for subnet in data.aws_subnet.existing_public : subnet.cidr_block
   ] : module.vpc[0].public_subnets_cidr_blocks
-  
+
   # Gateway information (unified)
   internet_gateway_id = local.is_import_mode ? (
     var.existing_igw_id != "" ? var.existing_igw_id : (
       length(data.aws_internet_gateway.existing) > 0 ? data.aws_internet_gateway.existing[0].id : ""
     )
   ) : module.vpc[0].igw_id
-  
+
   nat_gateway_ids = local.is_import_mode ? (
     length(var.existing_nat_gateway_ids) > 0 ? var.existing_nat_gateway_ids : (
       length(data.aws_nat_gateways.existing) > 0 ? data.aws_nat_gateways.existing[0].ids : []
     )
   ) : module.vpc[0].natgw_ids
-  
+
   # VPN information (unified)
   vpn_gateway_id = local.is_import_mode ? var.existing_vpn_gateway_id : ""
   vpn_enabled    = local.is_import_mode ? (var.existing_vpn_gateway_id != "") : var.enable_vpn
@@ -185,7 +185,7 @@ resource "null_resource" "mode_info" {
   provisioner "local-exec" {
     command = "echo 'Foundation Layer Mode: ${local.mode_name} | VPC: ${local.vpc_id} | Region: ${var.aws_region}'"
   }
-  
+
   triggers = {
     mode   = local.mode_name
     vpc_id = local.vpc_id
