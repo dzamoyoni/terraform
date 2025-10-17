@@ -36,16 +36,16 @@
 - Test provider-agnostic interfaces
 - Report issues and improvements
 
-**For Planning:** Review [Multi-Cloud Readiness Plan](docs/MULTI_CLOUD_READINESS_PLAN.md)
-- Detailed implementation roadmap
-- Resource requirements and timelines
-- Technical architecture considerations
+**For Planning:** Architecture designed for multi-cloud expansion
+- Provider-agnostic infrastructure modules
+- Consistent deployment patterns across clouds
+- Technical architecture ready for Azure/GCP
 
 ### Getting Multi-Provider Updates
 
 To track multi-provider development progress:
-- Review [Multi-Cloud Scaling Guide](docs/MULTI_CLOUD_SCALING_GUIDE.md) for architecture patterns
-- Monitor [Multi-Cloud Readiness Plan](docs/MULTI_CLOUD_READINESS_PLAN.md) for implementation status
+- Check [CHANGELOG.md](CHANGELOG.md) for latest updates
+- Review architecture documentation in provider directories
 
 ---
 
