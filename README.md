@@ -44,7 +44,6 @@
 ### Getting Multi-Provider Updates
 
 To track multi-provider development progress:
-- Check [CHANGELOG.md](CHANGELOG.md) for latest updates
 - Review [Multi-Cloud Scaling Guide](docs/MULTI_CLOUD_SCALING_GUIDE.md) for architecture patterns
 - Monitor [Multi-Cloud Readiness Plan](docs/MULTI_CLOUD_READINESS_PLAN.md) for implementation status
 
