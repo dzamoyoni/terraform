@@ -14,132 +14,160 @@
 git clone <repository-url>
 cd terraform
 
-# Set up environment variables
-export AWS_REGION="af-south-1"
-export PROJECT_NAME="cptwn-eks-01"
-export ENVIRONMENT="production"
+# Set up environment variables for your deployment
+export CLOUD_PROVIDER="aws"               # aws, azure, gcp
+export REGION="us-east-2"                 # Provider-specific region codes
+export PROJECT_NAME="project-alpha"        # Unique project identifier
+export ENVIRONMENT="production"            # production, staging, development
+
+# Computed deployment path
+export DEPLOYMENT_PATH="providers/${CLOUD_PROVIDER}/regions/${REGION}/${PROJECT_NAME}/${ENVIRONMENT}"
 ```
 
 ## Deployment Process
 
 ### Phase 1: Backend Setup
-Create the Terraform state backend (one-time setup per region):
+Create the Terraform state backend (one-time setup per provider/region combination):
 
 ```bash
-cd providers/aws/regions/af-south-1/backend-setup
+# Navigate to provider-specific backend setup
+cd infrastructure/${CLOUD_PROVIDER}-backend-setup
+
+# Deploy backend infrastructure
 terraform init
-terraform plan
+terraform plan -var="region=${REGION}" -var="project_name=${PROJECT_NAME}"
 terraform apply
 ```
 
-**What this creates:**
-- S3 bucket for Terraform state storage
-- DynamoDB table for state locking
-- IAM policies and encryption
+**What this creates (provider-specific):**
+
+**AWS:** S3 bucket for state storage, DynamoDB table for locking, IAM policies
+**Azure:** Storage Account with blob containers, Resource locks, RBAC assignments
+**GCP:** Cloud Storage bucket, Cloud Firestore for locking, IAM bindings
 
 ### Phase 2: Foundation Layer
 Deploy the network and security foundation:
 
 ```bash
-cd ../layers/01-foundation/production
-terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-production.hcl
-terraform plan -var="project_name=${PROJECT_NAME}"
+cd ${DEPLOYMENT_PATH}/layers/layer-1-foundation
+terraform init -backend-config=../../../../../shared/backend-configs/${CLOUD_PROVIDER}/${ENVIRONMENT}/${REGION}/${PROJECT_NAME}/foundation.hcl
+terraform plan -var="project_name=${PROJECT_NAME}" -var="environment=${ENVIRONMENT}"
 terraform apply
 ```
 
-**What this creates:**
-- VPC with public/private subnets
-- NAT gateways for internet access
-- Security groups and NACLs
-- VPN connections (if enabled)
-- Client-specific network isolation
+**What this creates (cloud-agnostic patterns):**
+
+**AWS:** VPC with public/private subnets, NAT gateways, security groups, NACLs
+**Azure:** Virtual Network with subnets, NAT Gateway, Network Security Groups
+**GCP:** VPC with subnets, Cloud NAT, firewall rules, network policies
 
 ### Phase 3: Platform Layer
 Deploy the Kubernetes platform:
 
 ```bash
-cd ../02-platform/production
-terraform init -backend-config=../../../../../shared/backend-configs/af-south-platform-production.hcl
-terraform plan -var="project_name=${PROJECT_NAME}"
+cd ../../layer-2-platform/production
+terraform init -backend-config=../../../../../shared/backend-configs/us-east-2-platform-production.hcl
+terraform plan
 terraform apply
 ```
 
 **What this creates:**
-- EKS cluster with managed node groups
-- IRSA (IAM Roles for Service Accounts)
-- Cluster autoscaler configuration
-- Network security policies
+- EKS cluster with managed node groups and IRSA
+- Dedicated system and application node groups
+- AWS Load Balancer Controller and CSI drivers
+- Pod security standards and network policies
+- Cluster autoscaler for dynamic scaling
 
-### Phase 4: Observability Layer
-Deploy monitoring and logging:
-
-```bash
-cd ../03.5-observability/production
-terraform init -backend-config=../../../../../shared/backend-configs/af-south-observability-production.hcl
-terraform plan -var="project_name=${PROJECT_NAME}"
-terraform apply
-```
-
-**What this creates:**
-- Prometheus for metrics collection
-- Grafana for visualization
-- Jaeger/Tempo for distributed tracing
-- FluentBit for log aggregation
-- S3 buckets for long-term storage
-
-### Phase 5: Database Layer
+### Phase 4: Data Layer
 Deploy database infrastructure:
 
 ```bash
-cd ../03-databases/production
-terraform init -backend-config=../../../../../shared/backend-configs/af-south-databases-production.hcl
-terraform plan -var="project_name=${PROJECT_NAME}"
+cd ../../layer-3-data/production
+terraform init -backend-config=../../../../../shared/backend-configs/us-east-2-data-production.hcl
+terraform plan
 terraform apply
 ```
 
 **What this creates:**
-- PostgreSQL instances on EC2
-- Automated backup systems
-- Database security groups
-- Client-specific database isolation
+- PostgreSQL RDS instances with Multi-AZ deployment
+- Automated backup strategies with point-in-time recovery
+- Database parameter groups and option groups
+- Enhanced monitoring and performance insights
+- Security groups with database-specific rules
 
-### Phase 6: Shared Services
-Deploy cluster-wide services:
+### Phase 5: Client Services Layer
+Deploy client-specific applications and services:
 
 ```bash
-cd ../06-shared-services/production
-terraform init -backend-config=../../../../../shared/backend-configs/af-south-shared-services-production.hcl
-terraform plan -var="project_name=${PROJECT_NAME}"
+cd ../../layer-4-client-services/production
+terraform init -backend-config=../../../../../shared/backend-configs/us-east-2-client-services-production.hcl
+terraform plan
 terraform apply
 ```
 
 **What this creates:**
-- AWS Load Balancer Controller
-- External DNS
-- Metrics Server
-- Cluster Autoscaler
+- Client-specific Kubernetes namespaces and RBAC
+- Application deployment configurations
+- Service accounts with least-privilege permissions
+- Resource quotas and limit ranges
+- Network policies for micro-segmentation
 
-## Multi-Region Deployment
-
-### Deploying to US-East-1
-After AF-South-1 is stable, deploy to US-East-1:
+### Phase 6: Gateway Layer
+Deploy API gateways and ingress controllers:
 
 ```bash
-export AWS_REGION="us-east-1"
-export PROJECT_NAME="us-east-1-cluster-01"
+cd ../../layer-5-gateway/production
+terraform init -backend-config=../../../../../shared/backend-configs/us-east-2-gateway-production.hcl
+terraform plan
+terraform apply
+```
 
-# Follow the same phases 1-6, but use us-east-1 paths:
-cd providers/aws/regions/us-east-1/backend-setup
+**What this creates:**
+- Application Load Balancers with SSL termination
+- API Gateway configurations for external access
+- Certificate management with AWS Certificate Manager
+- WAF rules for application protection
+- Route 53 DNS configurations
+
+### Phase 7: Observability Layer
+Deploy comprehensive monitoring and logging:
+
+```bash
+cd ../../layer-6-observability/production
+terraform init -backend-config=../../../../../shared/backend-configs/us-east-2-observability-production.hcl
+terraform plan
+terraform apply
+```
+
+**What this creates:**
+- Prometheus stack for metrics collection and alerting
+- Grafana for visualization and dashboards
+- Tempo for distributed tracing
+- Fluent Bit for log collection and forwarding
+- Loki for log aggregation and querying
+- S3 buckets for long-term storage of observability data
+
+## Multi-Region Deployment Strategy
+
+### Cross-Region Architecture
+Our primary production environment runs in US-East-2 with disaster recovery capabilities:
+
+```bash
+# For disaster recovery region deployment
+export AWS_REGION="us-west-2"
+export PROJECT_NAME="production-cluster-dr"
+
+# Follow the same layer deployment pattern
+cd providers/aws/regions/us-west-2/backend-setup
 # ... repeat deployment phases
 ```
 
-### Cross-Region Considerations
-- **CIDR Blocks**: Ensure non-overlapping IP ranges
-  - AF-South-1: `172.16.0.0/16`
-  - US-East-1: `172.20.0.0/16`
-- **DNS**: Configure Route 53 for global load balancing
-- **Data Replication**: Set up cross-region database replication
-- **Backup Strategy**: Implement cross-region backup storage
+### Network Isolation Considerations
+- **CIDR Blocks**: Non-overlapping IP ranges across regions
+  - US-East-2 (Production): `10.0.0.0/16`
+  - US-West-2 (DR): `10.1.0.0/16`
+- **DNS**: Route 53 health checks with automatic failover
+- **Backup Strategy**: Cross-region S3 replication for disaster recovery
 
 ## Scaling Strategies
 
@@ -148,44 +176,57 @@ cd providers/aws/regions/us-east-1/backend-setup
 #### Adding New Clients
 1. **Update Foundation Layer**:
 ```hcl
-# Add new client in foundation layer
-module "client_subnets_new_client" {
-  source = "../../../../../modules/client-subnets"
+# Add new client networking in foundation layer
+module "client_vpc_new_client" {
+  source = "../../../../modules/vpc-foundation"
   
   client_name       = "new-client-prod"
-  client_cidr_block = "172.16.20.0/22"  # Next available range
-  # ... other configuration
+  client_cidr_block = "10.0.20.0/22"  # Next available range
+  environment       = var.environment
+  project           = var.project
+  # ... enterprise tagging and configuration
 }
 ```
 
 2. **Update Platform Layer**:
 ```hcl
-# Add node group for new client
+# Add dedicated node group for new client
 node_groups = {
   new_client_prod = {
-    instance_types = ["m5.large"]
-    min_size      = 1
-    max_size      = 10
-    desired_size  = 2
+    instance_types = ["m6i.large"]
+    min_size      = 2
+    max_size      = 20
+    desired_size  = 3
+    subnet_ids    = module.client_vpc_new_client.private_subnet_ids
+    labels = {
+      "client" = "new-client-prod"
+      "workload-type" = "application"
+    }
   }
 }
 ```
 
 #### Adding New Regions
-1. **Copy region structure**:
+1. **Copy and customize region structure**:
 ```bash
-cp -r providers/aws/regions/af-south-1 providers/aws/regions/eu-west-1
+# Create new region structure
+cp -r providers/aws/regions/us-east-2 providers/aws/regions/eu-central-1
+
+# Update region-specific configurations
+find providers/aws/regions/eu-central-1 -name "*.tf" -exec sed -i 's/us-east-2/eu-central-1/g' {} +
+find providers/aws/regions/eu-central-1 -name "*.hcl" -exec sed -i 's/us-east-2/eu-central-1/g' {} +
 ```
 
-2. **Update configuration**:
-- Change CIDR blocks to avoid conflicts
-- Update region-specific variables
-- Modify backend configuration paths
+2. **Update networking and backend configurations**:
+- Change CIDR blocks to avoid conflicts (e.g., `10.2.0.0/16`)
+- Update Terraform backend S3 bucket and DynamoDB table names
+- Modify availability zone references
+- Update region-specific AMIs and instance types
 
-3. **Deploy incrementally**:
-- Start with backend setup
-- Deploy foundation layer
-- Add other layers based on requirements
+3. **Deploy using phased approach**:
+- Phase 1: Backend setup and state management
+- Phase 2: Foundation layer with network isolation
+- Phase 3-7: Deploy remaining layers based on regional requirements
 
 ### Vertical Scaling
 
@@ -204,10 +245,15 @@ node_groups = {
 
 #### Database Scaling
 ```hcl
-# Scale database instances
-instance_type = "r5.2xlarge"  # Upgraded from r5.large
-volume_size   = 500           # Increased from 100GB
-volume_iops   = 20000        # Increased IOPS
+# Scale RDS instances vertically
+instance_class = "db.r6g.2xlarge"  # Upgraded from db.r6g.large
+allocated_storage = 1000            # Increased from 100GB
+iops = 30000                        # Increased IOPS for better performance
+max_allocated_storage = 2000        # Enable storage autoscaling
+
+# Enable read replicas for horizontal scaling
+read_replica_count = 2
+read_replica_instance_class = "db.r6g.large"
 ```
 
 ## Environment Management

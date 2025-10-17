@@ -2,14 +2,14 @@
 
 ## Welcome to the Infrastructure Team
 
-This guide will help you understand our multi-cloud infrastructure approach and get you up and running with our Terraform-managed deployments.
+This guide will help you understand our production AWS infrastructure and get you up and running with our layered Terraform deployments.
 
 ## Essential Reading (30 minutes)
 
 Please read these documents in order to understand our infrastructure strategy:
 
-1. **[Multi-Cloud Strategy](MULTI_CLOUD_STRATEGY.md)** - Why we chose multi-cloud and architectural overview
-2. **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - How to deploy and scale infrastructure
+1. **[Usage Guide](USAGE_GUIDE.md)** - Practical day-to-day operations and client management
+2. **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Layer-by-layer infrastructure deployment
 3. **[FinOps & Cost Management](FINOPS_COST_MANAGEMENT.md)** - Cost optimization and financial governance
 
 ## Development Environment Setup
@@ -49,17 +49,44 @@ brew install jq yq helm  # Utilities for JSON/YAML and Kubernetes package manage
 2. **Repository Access**: Ensure you have read/write access to this repository
 3. **VPN Access**: Set up VPN for accessing private infrastructure resources
 
-### AWS Configuration
+### Cloud Provider Configuration
+
+#### AWS Configuration
 ```bash
 # Configure AWS CLI with your credentials
 aws configure
 # AWS Access Key ID: [Your Access Key]
 # AWS Secret Access Key: [Your Secret Key]
-# Default region name: af-south-1
+# Default region name: [your-target-region]  # us-east-2, us-west-1, eu-central-1, etc.
 # Default output format: json
 
 # Test access
 aws sts get-caller-identity
+```
+
+#### Azure Configuration (when applicable)
+```bash
+# Login to Azure
+az login
+
+# Set default subscription
+az account set --subscription "your-subscription-name"
+
+# Test access
+az account show
+```
+
+#### GCP Configuration (when applicable)
+```bash
+# Login to GCP
+gcloud auth login
+
+# Set default project and region
+gcloud config set project your-project-id
+gcloud config set compute/region your-region  # us-central1, europe-west1, etc.
+
+# Test access
+gcloud auth list
 ```
 
 ## Repository Structure
@@ -75,13 +102,10 @@ terraform/
 │   ├── client-subnets/      # Client isolation
 │   └── observability-layer/ # Monitoring & logging
 ├── providers/               # Cloud-specific deployments
-│   ├── aws/                 # Amazon Web Services
-│   │   ├── modules/         # AWS-specific modules
-│   │   └── regions/         # Regional deployments
-│   │       ├── af-south-1/  # Cape Town region
-│   │       └── us-east-1/   # N. Virginia region
-│   ├── gcp/                 # Google Cloud Platform (future)
-│   └── azure/               # Microsoft Azure (future)
+│   └── aws/                 # Amazon Web Services
+│       ├── modules/         # AWS-specific modules
+│       └── regions/         # Regional deployments
+│           └── us-east-2/   # Ohio region (production)
 ├── shared/                  # Cross-cloud configuration
 │   ├── backend-configs/     # Terraform state backend configs
 │   └── policies/            # Governance policies
@@ -93,11 +117,12 @@ terraform/
 Our infrastructure is deployed in logical layers:
 
 1. **Backend Setup**: Terraform state storage (S3 + DynamoDB)
-2. **01-foundation**: VPC, subnets, security groups, VPN
-3. **02-platform**: EKS clusters, node groups, IRSA
-4. **03-databases**: PostgreSQL instances, backup systems
-5. **03.5-observability**: Monitoring, logging, tracing
-6. **06-shared-services**: Load balancers, DNS, autoscaling
+2. **Layer 1 - Foundation**: VPC, subnets, security groups, NAT gateways
+3. **Layer 2 - Platform**: EKS clusters, node groups, IRSA
+4. **Layer 3 - Data**: PostgreSQL instances, backup strategies (To minimize cost to attain HIgh Availability avoiding RDS)
+5. **Layer 4 - Client Services**: Application-specific resources
+6. **Layer 5 - Gateway**: API gateways, load balancers
+7. **Layer 6 - Observability**: Monitoring, logging, distributed tracing
 
 ## Your First Deployment
 
@@ -110,31 +135,31 @@ git clone <repository-url>
 cd terraform
 
 # Explore the structure
-tree -L 3 providers/aws/regions/af-south-1/
+tree -L 3 providers/aws/regions/us-east-2/
 ```
 
 ### Step 2: Understand Current Deployments
 ```bash
-# Check what's currently deployed in AF-South-1
-cd providers/aws/regions/af-south-1
+# Check what's currently deployed in US-East-2
+cd providers/aws/regions/us-east-2
 
 # Look at the backend setup (already deployed)
 ls -la backend-setup/
 
 # Examine the foundation layer
-cat layers/01-foundation/production/main.tf | head -50
+cat layers/layer-1-foundation/production/main.tf | head -50
 ```
 
 ### Step 3: Plan a Small Change
 ```bash
 # Navigate to foundation layer
-cd layers/01-foundation/production
+cd layers/layer-1-foundation/production
 
 # Initialize Terraform (downloads providers and modules)
-terraform init -backend-config=../../../../../shared/backend-configs/af-south-foundation-production.hcl
+terraform init -backend-config=../../../../../shared/backend-configs/us-east-2-foundation-production.hcl
 
 # See what would change (should show "No changes")
-terraform plan -var="project_name=cptwn-eks-01"
+terraform plan
 ```
 
 ### Step 4: Review Current Infrastructure
@@ -143,39 +168,39 @@ terraform plan -var="project_name=cptwn-eks-01"
 terraform show | head -50
 
 # Check Kubernetes cluster status
-aws eks describe-cluster --name cptwn-eks-01 --region af-south-1
+aws eks describe-cluster --name production-cluster --region us-east-2
 
 # List running instances
-aws ec2 describe-instances --region af-south-1 --filters "Name=instance-state-name,Values=running" --query 'Reservations[].Instances[].[InstanceId,InstanceType,Tags[?Key==`Name`].Value[]]' --output table
+aws ec2 describe-instances --region us-east-2 --filters "Name=instance-state-name,Values=running" --query 'Reservations[].Instances[].[InstanceId,InstanceType,Tags[?Key==`Name`].Value[]]' --output table
 ```
 
 ## Common Tasks
 
 ### Adding a New Client
 
-1. **Update Foundation Layer** - Add client subnet configuration:
+1. **Update Foundation Layer** - Add client networking configuration:
 ```hcl
-# In layers/01-foundation/production/main.tf
-module "client_subnets_new_client" {
-  source = "../../../../../modules/client-subnets"
+# In layers/layer-1-foundation/production/main.tf
+module "client_networking_new_client" {
+  source = "../../../../modules/vpc-foundation"
   
-  enabled            = true
   client_name        = "new-client-prod"
-  client_cidr_block  = "172.16.24.0/22"  # Next available range
-  # ... configuration
+  client_cidr_block  = "10.0.24.0/22"  # Next available range
+  availability_zones = data.aws_availability_zones.available.names
+  # ... configuration from common variables
 }
 ```
 
-2. **Update Platform Layer** - Add node group:
+2. **Update Platform Layer** - Add dedicated node group:
 ```hcl
-# In layers/02-platform/production/main.tf
+# In layers/layer-2-platform/production/main.tf
 node_groups = {
   new_client_prod = {
-    instance_types = ["m5.large"]
+    instance_types = ["m6i.large"]
     min_size      = 1
-    max_size      = 5
+    max_size      = 10
     desired_size  = 2
-    client        = "new-client-prod"
+    subnet_ids    = module.client_networking_new_client.private_subnet_ids
   }
 }
 ```
@@ -183,13 +208,13 @@ node_groups = {
 3. **Plan and Apply Changes**:
 ```bash
 # Foundation layer first
-cd layers/01-foundation/production
-terraform plan -var="project_name=cptwn-eks-01"
+cd layers/layer-1-foundation/production
+terraform plan
 terraform apply
 
-# Platform layer second
-cd ../02-platform/production
-terraform plan -var="project_name=cptwn-eks-01"
+# Platform layer second  
+cd ../../layer-2-platform/production
+terraform plan
 terraform apply
 ```
 
@@ -197,9 +222,9 @@ terraform apply
 
 ```bash
 # Navigate to platform layer
-cd providers/aws/regions/af-south-1/layers/02-platform/production
+cd providers/aws/regions/us-east-2/layers/layer-2-platform/production
 
-# Update desired capacity in main.tf or terraform.tfvars
+# Update desired capacity in terraform.tfvars or variables
 # Then apply changes
 terraform plan -var="desired_size=4"  # Scale from 2 to 4 nodes
 terraform apply
@@ -217,11 +242,11 @@ aws ce get-cost-and-usage \
 
 # Check resource tags for cost allocation
 aws resourcegroupstaggingapi get-resources \
-  --region af-south-1 \
-  --tag-filters Key=Project,Values=cptwn-eks-01
+  --region us-east-2 \
+  --tag-filters Key=Environment,Values=production
 ```
 
-## 🔍 Troubleshooting Common Issues
+## Troubleshooting Common Issues
 
 ### Terraform State Locks
 ```bash
@@ -229,8 +254,9 @@ aws resourcegroupstaggingapi get-resources \
 terraform force-unlock <lock-id>
 
 # Always check who's running Terraform:
-aws dynamodb get-item --table-name terraform-locks-af-south \
-  --key '{"LockID":{"S":"<lock-id>"}}'
+aws dynamodb get-item --table-name terraform-locks-us-east-2 \
+  --key '{"LockID":{"S":"<lock-id>"}}' \
+  --region us-east-2
 ```
 
 ### Module Not Found
@@ -246,16 +272,16 @@ terraform get -update
 aws sts get-caller-identity
 
 # Check if you can access the S3 state bucket
-aws s3 ls s3://cptwn-terraform-state-ezra/
+aws s3 ls s3://terraform-state-us-east-2/
 
 # Verify IAM permissions with dry-run
-aws ec2 describe-instances --dry-run --region af-south-1
+aws ec2 describe-instances --dry-run --region us-east-2
 ```
 
 ### Kubernetes Access Issues
 ```bash
 # Update kubeconfig
-aws eks update-kubeconfig --region af-south-1 --name cptwn-eks-01
+aws eks update-kubeconfig --region us-east-2 --name production-cluster
 
 # Test kubectl access
 kubectl get nodes
@@ -317,10 +343,10 @@ kubectl get pods --all-namespaces
 6. **Follow up**: Post-incident review and prevention measures
 
 ### Disaster Recovery
-- **Primary region failure**: Switch traffic to US-East-1
-- **Data loss**: Restore from automated S3 backups
-- **Complete AWS outage**: Activate GCP/Azure disaster recovery plan
-- **Security breach**: Follow incident response playbook
+- **Primary region failure**: Activate cross-region failover procedures
+- **Data loss**: Restore from automated S3 backups with point-in-time recovery
+- **Complete AWS outage**: Execute multi-cloud disaster recovery plan
+- **Security breach**: Follow incident response playbook and compliance requirements
 
 ## Growth and Learning
 

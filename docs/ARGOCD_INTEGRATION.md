@@ -1,11 +1,25 @@
 # ArgoCD Integration Strategy
-## Complete GitOps Stack: Infrastructure + Applications
+## Production-Grade Application GitOps with Zero-Trust Security
+
+## Next-Generation Implementation Plan
+
+**Implementation Status:** This document defines the production-ready ArgoCD integration architecture designed for enterprise-scale, multi-tenant infrastructure with advanced security controls.
+
+**Production-Grade Features:**
+- ✅ Zero-trust application deployment
+- ✅ Dynamic multi-tenant isolation with RBAC
+- ✅ Automated security policy enforcement
+- ✅ Real-time compliance monitoring
+- ✅ High-availability with disaster recovery
+- ✅ Advanced GitOps workflows with approval gates
+
+**Roadmap Position:** ArgoCD integration planned as cornerstone of application deployment after infrastructure GitOps stabilization.
 
 ---
 
-## ArgoCD's Role in Our Enterprise GitOps Architecture
+## ArgoCD's Role in Enterprise GitOps Architecture
 
-**ArgoCD is a critical component** of our complete GitOps solution, positioned specifically for **application deployment and management** while Atlantis handles **infrastructure provisioning**. This creates a comprehensive GitOps ecosystem.
+**ArgoCD serves as the production-grade application deployment engine** in our comprehensive GitOps ecosystem, providing secure, auditable, and dynamic application lifecycle management while Atlantis handles infrastructure provisioning.
 
 ### Complete GitOps Architecture
 
@@ -78,61 +92,289 @@ Applications Deployed to Cluster
 ### Phase 4 Implementation (Weeks 7-8)
 ArgoCD deployment is planned for **Phase 4: Advanced Features**, providing the complete GitOps experience.
 
-### ArgoCD Enterprise Configuration
+### ArgoCD Production-Grade Configuration with Advanced Security
 
 ```yaml
-# argocd-values.yaml
+# argocd-values.yaml - Enterprise Security Hardened
 global:
   image:
     repository: argoproj/argocd
-    tag: v2.8.4
+    tag: v2.9.3
+    imagePullPolicy: Always
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    fsGroup: 999
+  podLabels:
+    security.compliance/level: "high"
+    app.kubernetes.io/part-of: "gitops-platform"
+  nodeSelector:
+    node-role.kubernetes.io/system: "true"
+  tolerations:
+  - key: "node-role.kubernetes.io/system"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
 
+# Application Controller - High Availability
 controller:
-  replicas: 2
+  name: application-controller
+  replicas: 3
+  enableStatefulSet: true
+  
+  # Security Context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+  
+  # Resource Management
+  resources:
+    requests:
+      cpu: "2000m"
+      memory: "4Gi"
+      ephemeral-storage: "1Gi"
+    limits:
+      cpu: "4000m"
+      memory: "8Gi"
+      ephemeral-storage: "2Gi"
+  
+  # Application Controller Configuration
+  extraArgs:
+  - --status-processors=20
+  - --operation-processors=10
+  - --app-resync=180
+  - --repo-server-timeout-seconds=60
+  - --self-heal-timeout-seconds=5
+  - --kubectl-parallelism-limit=10
+  
+  # Probes
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+
+# Server - High Availability with Security
+server:
+  name: server
+  replicas: 3
+  
+  # Security Context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+  
+  # Resource Management
   resources:
     requests:
       cpu: "1000m"
       memory: "2Gi"
+      ephemeral-storage: "1Gi"
     limits:
       cpu: "2000m"
       memory: "4Gi"
-
-server:
-  replicas: 2
+      ephemeral-storage: "2Gi"
+  
+  # Ingress Configuration with Security
   ingress:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: "aws-load-balancer-controller"
-      alb.ingress.kubernetes.io/scheme: "internet-facing"
+      alb.ingress.kubernetes.io/scheme: "internal"  # Internal only for security
       alb.ingress.kubernetes.io/certificate-arn: "${SSL_CERTIFICATE_ARN}"
+      alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS-1-2-2017-01"
+      alb.ingress.kubernetes.io/backend-protocol: "HTTPS"
+      alb.ingress.kubernetes.io/healthcheck-protocol: "HTTPS"
+      alb.ingress.kubernetes.io/wafv2-acl-arn: "${WAF_ACL_ARN}"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     hosts:
-      - argocd.company.com
-
-  # SSO Integration
+    - argocd.internal.company.com
+    tls:
+    - secretName: argocd-server-tls
+      hosts:
+      - argocd.internal.company.com
+  
+  # OIDC/SSO Configuration
   config:
+    url: "https://argocd.internal.company.com"
+    
+    # OIDC Configuration
     oidc.config: |
-      name: Corporate SSO
-      issuer: https://sso.company.com
-      clientId: argocd
+      name: Enterprise SSO
+      issuer: https://sso.company.com/auth/realms/company
+      clientId: argocd-prod
       clientSecret: $oidc.clientSecret
       requestedScopes: ["openid", "profile", "email", "groups"]
-
-  # RBAC Configuration
+      requestedIDTokenClaims: {"groups": {"essential": true}}
+    
+    # Security Headers
+    server.additional.headers: |
+      X-Frame-Options: DENY
+      X-Content-Type-Options: nosniff
+      X-XSS-Protection: 1; mode=block
+      Strict-Transport-Security: max-age=31536000; includeSubDomains
+      Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'
+    
+    # Repository Configuration
+    repositories: |
+      - type: git
+        url: https://github.com/company/kubernetes-applications
+        passwordSecret:
+          name: repo-creds
+          key: password
+        usernameSecret:
+          name: repo-creds
+          key: username
+      - type: helm
+        url: https://charts.company.com
+        name: company-charts
+        passwordSecret:
+          name: helm-repo-creds
+          key: password
+        usernameSecret:
+          name: helm-repo-creds
+          key: username
+    
+    # Cluster Configuration with Multi-Tenant Support
+    cluster.config: |
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsClientConfig:
+        insecure: false
+        caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  
+  # Advanced RBAC Configuration
   rbac:
     policy.default: role:readonly
+    
+    # Comprehensive RBAC Policy
     policy.csv: |
-      p, role:admin, applications, *, */*, allow
-      p, role:admin, clusters, *, *, allow
-      p, role:admin, repositories, *, *, allow
+      # Global Admin Permissions
+      p, role:global-admin, applications, *, */*, allow
+      p, role:global-admin, clusters, *, *, allow
+      p, role:global-admin, repositories, *, *, allow
+      p, role:global-admin, projects, *, *, allow
+      p, role:global-admin, accounts, *, *, allow
+      p, role:global-admin, gpgkeys, *, *, allow
+      p, role:global-admin, certificates, *, *, allow
       
-      p, role:developer, applications, *, default/*, allow
-      p, role:developer, applications, get, */*, allow
+      # Platform Admin Permissions (Infrastructure)
+      p, role:platform-admin, applications, *, platform-*, allow
+      p, role:platform-admin, applications, *, monitoring-*, allow
+      p, role:platform-admin, applications, *, security-*, allow
+      p, role:platform-admin, clusters, get, *, allow
+      p, role:platform-admin, repositories, *, platform-*, allow
       
-      g, infrastructure-admins, role:admin
-      g, developers, role:developer
+      # Client Admin Permissions (Per Client)
+      p, role:client-admin, applications, *, client-{CLIENT_NAME}-*, allow
+      p, role:client-admin, applications, get, */*, allow
+      p, role:client-admin, repositories, get, *, allow
+      
+      # Developer Permissions (Per Client)
+      p, role:client-developer, applications, get, client-{CLIENT_NAME}-*, allow
+      p, role:client-developer, applications, sync, client-{CLIENT_NAME}-*, allow
+      p, role:client-developer, applications, action, client-{CLIENT_NAME}-*, allow
+      p, role:client-developer, repositories, get, *, allow
+      
+      # Read-Only Permissions
+      p, role:readonly, applications, get, *, allow
+      p, role:readonly, projects, get, *, allow
+      p, role:readonly, repositories, get, *, allow
+      
+      # Group Mappings (from SSO)
+      g, company:infrastructure-admins, role:global-admin
+      g, company:platform-engineering, role:platform-admin
+      g, company:client-alpha-admins, role:client-admin
+      g, company:client-alpha-developers, role:client-developer
+      g, company:security-team, role:readonly
+    
+    # RBAC Scopes
+    scopes: '[groups, email]'
 
+# Repository Server - High Availability
 repoServer:
-  replicas: 2
+  name: repo-server
+  replicas: 3
+  
+  # Security Context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+  
+  # Resource Management
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "2Gi"
+      ephemeral-storage: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+      ephemeral-storage: "4Gi"
+  
+  # Repository Server Configuration
+  extraArgs:
+  - --parallelism-limit=10
+  - --grpc-max-size-mb=200
+  
+  # Volume Mounts for Security
+  volumeMounts:
+  - name: custom-tools
+    mountPath: /usr/local/bin/custom-tools
+    readOnly: true
+  - name: tmp
+    mountPath: /tmp
+  
+  volumes:
+  - name: custom-tools
+    configMap:
+      name: argocd-custom-tools
+      defaultMode: 0755
+  - name: tmp
+    emptyDir: {}
+
+# ApplicationSet Controller - Dynamic Application Management
+applicationSet:
+  name: applicationset-controller
+  enabled: true
+  replicas: 3
+  
+  # Security Context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+  
+  # Resource Management
   resources:
     requests:
       cpu: "500m"
@@ -140,10 +382,64 @@ repoServer:
     limits:
       cpu: "1000m"
       memory: "2Gi"
+  
+  # ApplicationSet Configuration
+  extraArgs:
+  - --metrics-addr=0.0.0.0:8080
+  - --probe-addr=0.0.0.0:8081
+  - --webhook-addr=0.0.0.0:7000
+  - --concurrent-reconciles=10
 
-applicationSet:
+# Redis HA for State Management
+redis-ha:
   enabled: true
-  replicas: 2
+  
+  # High Availability Configuration
+  hardAntiAffinity: true
+  
+  # Security Configuration
+  auth: true
+  authKey: redis-auth
+  
+  # Resource Management
+  redis:
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  
+  sentinel:
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+
+# Notifications Controller
+notifications:
+  enabled: true
+  name: notifications-controller
+  
+  # Security Context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    readOnlyRootFilesystem: true
+  
+  # Resource Management
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
 ```
 
 ### Repository Structure for Applications

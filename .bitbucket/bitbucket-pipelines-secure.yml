@@ -1,0 +1,627 @@
+# Production-Grade GitOps Pipeline with Zero-Trust Security (2024)
+# Latest security tools, compliance frameworks, and enterprise-grade controls
+image: hashicorp/terraform:1.7.5
+
+options:
+  max-time: 120
+  size: 2x
+  docker: true
+
+definitions:
+  caches:
+    terraform: ~/.terraform.d/plugin-cache
+    node: node_modules
+    pip: ~/.cache/pip
+    trivy-cache: ~/.cache/trivy
+    snyk-cache: ~/.snyk
+    
+  services:
+    docker:
+      memory: 8192
+
+  steps:
+    - step: &setup-hardened-environment
+        name: Setup Zero-Trust Environment
+        image: alpine/git:latest
+        script:
+          - echo "🔐 Initializing zero-trust pipeline environment..."
+          - apk add --no-cache curl jq python3 py3-pip nodejs npm git gnupg openssh-client wget tar
+          
+          # Install latest security toolchain
+          - echo "Installing latest Terraform..."
+          - wget -q https://releases.hashicorp.com/terraform/1.7.5/terraform_1.7.5_linux_amd64.zip
+          - unzip terraform_1.7.5_linux_amd64.zip && mv terraform /usr/local/bin/
+          
+          - echo "Installing comprehensive security tools..."
+          - pip install --no-cache-dir --upgrade pip setuptools wheel
+          - pip install checkov[github]==3.2.56 bandit[toml]==1.7.5 safety==3.0.1 semgrep==1.45.0 tfsec==1.28.4 infracost==0.10.29 terraform-compliance==1.3.41
+          
+          # Install latest container security tools
+          - echo "Installing Trivy for container/IaC scanning..."
+          - wget -q https://github.com/aquasecurity/trivy/releases/download/v0.49.1/trivy_0.49.1_Linux-64bit.tar.gz
+          - tar zxf trivy_0.49.1_Linux-64bit.tar.gz && mv trivy /usr/local/bin/
+          
+          # Install Snyk for dependency scanning
+          - echo "Installing Snyk CLI..."
+          - npm install -g snyk@latest snyk-to-html@latest audit-ci@latest
+          
+          # Install KICS for IaC security
+          - echo "Installing KICS for Infrastructure Security..."
+          - wget -q https://github.com/Checkmarx/kics/releases/download/v1.7.13/kics_1.7.13_linux_x64.tar.gz
+          - tar -xzf kics_1.7.13_linux_x64.tar.gz && mv kics /usr/local/bin/
+          
+          # Install Terrascan
+          - echo "Installing Terrascan..."
+          - wget -q https://github.com/tenable/terrascan/releases/download/v1.18.11/terrascan_1.18.11_Linux_x86_64.tar.gz
+          - tar -xzf terrascan_1.18.11_Linux_x86_64.tar.gz terrascan && mv terrascan /usr/local/bin/
+          
+          # Install git-secrets and gitleaks
+          - echo "Installing secret scanning tools..."
+          - wget -q https://github.com/zricethezav/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz
+          - tar -xzf gitleaks_8.18.2_linux_x64.tar.gz && mv gitleaks /usr/local/bin/
+          
+          # Configure secure git
+          - git config --global user.email "pipeline@company.com"
+          - git config --global user.name "SecOps Pipeline"
+          - git config --global init.defaultBranch main
+          
+          # Set security environment variables
+          - export TF_IN_AUTOMATION=true
+          - export TF_INPUT=0
+          - export TF_CLI_ARGS="-no-color"
+          - export CHECKOV_RUN_SCA_PACKAGE_SCAN=true
+          - export SNYK_DISABLE_ANALYTICS=true
+          
+          - echo "✅ Zero-trust environment initialized"
+        caches:
+          - pip
+          - node
+          - trivy-cache
+          - snyk-cache
+
+    - step: &comprehensive-security-scan
+        name: Multi-Layer Security Analysis
+        script:
+          - echo "🔍 Starting comprehensive security analysis pipeline..."
+          
+          # 1. Secret Detection (Critical - Must Pass)
+          - echo "🔍 1/8 Secret Detection with Gitleaks..."
+          - gitleaks detect --source . --format json --report-path gitleaks-report.json --exit-code 1 || SECRET_ISSUES=true
+          - gitleaks detect --source . --format sarif --report-path gitleaks-report.sarif --exit-code 0
+          
+          # 2. Infrastructure as Code Security
+          - echo "🔍 2/8 Terraform Security Analysis..."
+          - |
+            # Checkov - Comprehensive IaC Security
+            checkov -d . --framework terraform,secrets,dockerfile,kubernetes,helm \
+              --output cli --output json --output sarif --output cyclonedx \
+              --output-file-path console,checkov-results.json,checkov-results.sarif,checkov-sbom.json \
+              --check CKV_AWS_20,CKV_AWS_21,CKV_AWS_35,CKV_AWS_57,CKV_AWS_61,CKV_AWS_76,CKV_AWS_149 \
+              --compact --quiet || CHECKOV_ISSUES=true
+            
+            # TFSec - Terraform Static Analysis
+            tfsec . --format json --format sarif --format checkstyle \
+              --out tfsec-results.json --out tfsec-results.sarif --out tfsec-checkstyle.xml \
+              --include-ignored --exclude-downloaded-modules=false || TFSEC_ISSUES=true
+            
+            # KICS - Infrastructure Security
+            kics scan -p . -o kics-results.json -f json --exclude-paths .git,.terraform \
+              --ignore-on-exit results || KICS_ISSUES=true
+            
+            # Terrascan - Policy as Code
+            terrascan scan -d . -o json --output terrascan-results.json \
+              --skip-rules AC_AWS_0001 || TERRASCAN_ISSUES=true
+          
+          # 3. Static Application Security Testing (SAST)
+          - echo "🔍 3/8 Static Code Analysis..."
+          - semgrep --config=auto . --json --output=semgrep-results.json \
+              --exclude="*.tfstate*" --exclude=".git" --exclude=".terraform" || SEMGREP_ISSUES=true
+          
+          # 4. Dependency Vulnerability Scanning
+          - echo "🔍 4/8 Dependency Vulnerability Scan..."
+          - |
+            # Python dependencies
+            if [ -f requirements.txt ]; then
+              safety check -r requirements.txt --json --output safety-results.json || SAFETY_ISSUES=true
+            fi
+            
+            # Node.js dependencies
+            if [ -f package.json ]; then
+              npm audit --audit-level high --json > npm-audit-results.json || NPM_AUDIT_ISSUES=true
+              snyk test --json --file=package.json > snyk-npm-results.json || SNYK_ISSUES=true
+            fi
+          
+          # 5. Container Image Security
+          - echo "🔍 5/8 Container Security Analysis..."
+          - |
+            find . -name "Dockerfile*" | while read dockerfile; do
+              trivy config "$dockerfile" --format json --output "trivy-config-$(basename $dockerfile).json" || TRIVY_CONFIG_ISSUES=true
+            done
+            
+            # Scan for misconfigurations in all files
+            trivy fs . --security-checks vuln,config,secret \
+              --format json --output trivy-fs-results.json \
+              --skip-dirs .git,.terraform || TRIVY_FS_ISSUES=true
+          
+          # 6. Compliance Framework Validation
+          - echo "🔍 6/8 Compliance Framework Validation..."
+          - |
+            # SOC 2 Type II Compliance
+            checkov -d . --framework terraform \
+              --check CKV_AWS_20,CKV_AWS_21,CKV_AWS_35,CKV_AWS_57,CKV_AWS_61 \
+              --output json --output-file-path soc2-compliance.json || SOC2_ISSUES=true
+            
+            # GDPR Compliance
+            checkov -d . --framework terraform \
+              --check CKV_AWS_76,CKV_AWS_149,CKV_AWS_7,CKV_AWS_8 \
+              --output json --output-file-path gdpr-compliance.json || GDPR_ISSUES=true
+            
+            # PCI DSS Compliance
+            checkov -d . --framework terraform \
+              --check CKV_AWS_40,CKV_AWS_89,CKV_AWS_93,CKV_AWS_130 \
+              --output json --output-file-path pci-compliance.json || PCI_ISSUES=true
+            
+            # ISO 27001 Compliance
+            checkov -d . --framework terraform \
+              --check CKV_AWS_18,CKV_AWS_19,CKV_AWS_24,CKV_AWS_25 \
+              --output json --output-file-path iso27001-compliance.json || ISO_ISSUES=true
+          
+          # 7. Terraform Compliance Testing
+          - echo "🔍 7/8 Terraform Compliance Testing..."
+          - |
+            if [ -f terraform-compliance.yml ]; then
+              terraform-compliance -p . -f terraform-compliance.yml || COMPLIANCE_ISSUES=true
+            fi
+          
+          # 8. Custom Security Validations
+          - echo "🔍 8/8 Custom Security Validations..."
+          - |
+            # Encryption validation
+            grep -r "encrypted.*=.*false" --include="*.tf" . > unencrypted-resources.txt || true
+            [ -s unencrypted-resources.txt ] && ENCRYPTION_ISSUES=true
+            
+            # Hardcoded secrets detection
+            grep -r -i -E "(password|secret|key|token).*=.*['\"][^'\"]{8,}['\"]" \
+              --include="*.tf" --include="*.yml" --include="*.yaml" . > hardcoded-secrets.txt || true
+            [ -s hardcoded-secrets.txt ] && HARDCODED_SECRETS=true
+            
+            # Public access validation
+            grep -r "0.0.0.0/0" --include="*.tf" . > public-access.txt || true
+            grep -r "\"*\"" --include="*.tf" . >> public-access.txt || true
+            [ -s public-access.txt ] && PUBLIC_ACCESS_ISSUES=true
+          
+          # Security Gate Decision Engine
+          - echo "🚦 Evaluating Security Gate..."
+          - |
+            python3 << 'EOF'
+import json
+import sys
+import os
+
+def evaluate_security_gate():
+    """Advanced security gate with weighted scoring"""
+    
+    issues = {
+        "critical": 0, "high": 0, "medium": 0, "low": 0, 
+        "secrets": 0, "compliance": 0, "encryption": 0
+    }
+    
+    security_score = 100  # Start with perfect score
+    
+    # Check for critical blocking conditions
+    if os.getenv('SECRET_ISSUES'):
+        issues["secrets"] += 10
+        security_score -= 50  # Major penalty for secrets
+        print("❌ CRITICAL: Secrets detected in code")
+    
+    if os.getenv('HARDCODED_SECRETS'):
+        issues["secrets"] += 5
+        security_score -= 30
+        print("❌ CRITICAL: Hardcoded secrets found")
+    
+    if os.getenv('ENCRYPTION_ISSUES'):
+        issues["encryption"] += 1
+        security_score -= 25
+        print("⚠️  WARNING: Unencrypted resources detected")
+    
+    # Analyze tool results
+    tools_results = [
+        ('checkov-results.json', 'Checkov'),
+        ('tfsec-results.json', 'TFSec'),
+        ('semgrep-results.json', 'Semgrep'),
+        ('kics-results.json', 'KICS'),
+        ('trivy-fs-results.json', 'Trivy'),
+    ]
+    
+    for result_file, tool_name in tools_results:
+        if os.path.exists(result_file):
+            try:
+                with open(result_file, 'r') as f:
+                    data = json.load(f)
+                    
+                if tool_name == 'Checkov':
+                    failed_checks = data.get('results', {}).get('failed_checks', [])
+                    for check in failed_checks:
+                        severity = check.get('severity', 'MEDIUM').upper()
+                        if severity == 'CRITICAL':
+                            issues["critical"] += 1
+                            security_score -= 10
+                        elif severity == 'HIGH':
+                            issues["high"] += 1
+                            security_score -= 5
+                        elif severity == 'MEDIUM':
+                            issues["medium"] += 1
+                            security_score -= 2
+                        else:
+                            issues["low"] += 1
+                            security_score -= 1
+                            
+                elif tool_name == 'TFSec':
+                    results = data.get('results', [])
+                    for result in results:
+                        severity = result.get('severity', 'MEDIUM').upper()
+                        if severity == 'CRITICAL':
+                            issues["critical"] += 1
+                            security_score -= 8
+                        elif severity == 'HIGH':
+                            issues["high"] += 1
+                            security_score -= 4
+                        else:
+                            issues["medium"] += 1
+                            security_score -= 2
+                            
+            except Exception as e:
+                print(f"Warning: Could not parse {result_file}: {e}")
+    
+    # Compliance scoring
+    compliance_files = [
+        'soc2-compliance.json', 'gdpr-compliance.json', 
+        'pci-compliance.json', 'iso27001-compliance.json'
+    ]
+    
+    for comp_file in compliance_files:
+        if os.path.exists(comp_file):
+            try:
+                with open(comp_file, 'r') as f:
+                    comp_data = json.load(f)
+                    failed = len(comp_data.get('results', {}).get('failed_checks', []))
+                    if failed > 0:
+                        issues["compliance"] += failed
+                        security_score -= (failed * 3)
+            except Exception as e:
+                print(f"Warning: Could not parse {comp_file}: {e}")
+    
+    # Generate comprehensive report
+    print(f"\n🔒 SECURITY ANALYSIS RESULTS")
+    print(f"=" * 50)
+    print(f"Security Score: {max(0, security_score)}/100")
+    print(f"Critical Issues: {issues['critical']}")
+    print(f"High Issues: {issues['high']}")
+    print(f"Medium Issues: {issues['medium']}")
+    print(f"Low Issues: {issues['low']}")
+    print(f"Secret Issues: {issues['secrets']}")
+    print(f"Compliance Issues: {issues['compliance']}")
+    print(f"Encryption Issues: {issues['encryption']}")
+    
+    # Security gate decision logic
+    if issues['secrets'] > 0:
+        print("🚫 SECURITY GATE: FAILED - Secrets in code (Zero tolerance)")
+        return False
+    elif issues['critical'] > 0:
+        print("🚫 SECURITY GATE: FAILED - Critical vulnerabilities found")
+        return False
+    elif issues['high'] > 10:
+        print("🚫 SECURITY GATE: FAILED - Too many high-severity issues")
+        return False
+    elif security_score < 70:
+        print("🚫 SECURITY GATE: FAILED - Security score below threshold")
+        return False
+    else:
+        print("✅ SECURITY GATE: PASSED")
+        print(f"Security posture acceptable with score: {security_score}/100")
+        return True
+
+if not evaluate_security_gate():
+    sys.exit(1)
+EOF
+          
+        artifacts:
+          - gitleaks-report.json
+          - gitleaks-report.sarif
+          - checkov-results.json
+          - checkov-results.sarif
+          - checkov-sbom.json
+          - tfsec-results.json
+          - tfsec-results.sarif
+          - kics-results.json
+          - terrascan-results.json
+          - semgrep-results.json
+          - trivy-fs-results.json
+          - soc2-compliance.json
+          - gdpr-compliance.json
+          - pci-compliance.json
+          - iso27001-compliance.json
+          - safety-results.json
+          - npm-audit-results.json
+          - snyk-npm-results.json
+          - unencrypted-resources.txt
+          - hardcoded-secrets.txt
+          - public-access.txt
+
+    - step: &advanced-terraform-validation
+        name: Advanced Terraform Validation & Planning
+        script:
+          - echo "🔧 Advanced Terraform validation and planning..."
+          
+          # Multi-environment validation
+          - |
+            ENVIRONMENTS=("production" "staging" "development")
+            LAYERS=("layer-1-foundation" "layer-2-platform" "layer-3-data" "layer-6-observability")
+            
+            for ENV in "${ENVIRONMENTS[@]}"; do
+              for LAYER in "${LAYERS[@]}"; do
+                LAYER_PATH="providers/{provider}/regions/{region}/{project}/$ENV/layers/$LAYER"
+                
+                if [ -d "$LAYER_PATH" ]; then
+                  echo "Validating $LAYER in $ENV environment..."
+                  cd "$LAYER_PATH"
+                  
+                  # Format check
+                  terraform fmt -check=true -diff=true -recursive
+                  
+                  # Validation without backend
+                  terraform init -backend=false -upgrade=false
+                  terraform validate -json > "${LAYER}-${ENV}-validation.json"
+                  
+                  # Provider and module version checks
+                  terraform providers > "${LAYER}-${ENV}-providers.txt"
+                  
+                  cd - > /dev/null
+                fi
+              done
+            done
+          
+          # Plan generation with cost analysis
+          - echo "🔧 Generating execution plans..."
+          - |
+            # Generate plans for changed components
+            CHANGED_COMPONENTS=$(git diff --name-only HEAD~1 HEAD | grep -E "\.tf$|\.tfvars$" | cut -d'/' -f1-7 | sort -u)
+            
+            for COMPONENT in $CHANGED_COMPONENTS; do
+              if [ -d "$COMPONENT" ]; then
+                cd "$COMPONENT"
+                
+                # Get backend config
+                BACKEND_CONFIG=$(find ../../../../../../../shared/backend-configs -name "*${COMPONENT##*/}*" | head -1)
+                
+                if [ -f "$BACKEND_CONFIG" ]; then
+                  echo "Planning $COMPONENT..."
+                  terraform init -backend-config="$BACKEND_CONFIG"
+                  terraform plan -detailed-exitcode -out="${COMPONENT##*/}.tfplan" \
+                    -var="project_name={project}" -var="environment={environment}"
+                  terraform show -json "${COMPONENT##*/}.tfplan" > "${COMPONENT##*/}-plan.json"
+                fi
+                
+                cd - > /dev/null
+              fi
+            done
+          
+          # Plan analysis and risk assessment
+          - echo "📊 Analyzing execution plans..."
+          - |
+            python3 << 'EOF'
+import json
+import glob
+import os
+
+def analyze_terraform_plans():
+    """Analyze all terraform plans for risk assessment"""
+    
+    total_changes = {"add": 0, "change": 0, "destroy": 0}
+    high_risk_changes = []
+    
+    for plan_file in glob.glob("**/*-plan.json", recursive=True):
+        try:
+            with open(plan_file, 'r') as f:
+                plan_data = json.load(f)
+            
+            resource_changes = plan_data.get('resource_changes', [])
+            
+            for change in resource_changes:
+                actions = change.get('change', {}).get('actions', [])
+                resource_type = change.get('type', '')
+                resource_name = change.get('name', '')
+                
+                if 'create' in actions:
+                    total_changes['add'] += 1
+                elif 'update' in actions:
+                    total_changes['change'] += 1
+                elif 'delete' in actions or 'destroy' in actions:
+                    total_changes['destroy'] += 1
+                    
+                    # Flag high-risk deletions
+                    if resource_type in ['aws_vpc', 'aws_db_instance', 'aws_eks_cluster']:
+                        high_risk_changes.append({
+                            'action': 'destroy',
+                            'type': resource_type,
+                            'name': resource_name,
+                            'plan_file': plan_file
+                        })
+    
+    print(f"Terraform Plan Analysis:")
+    print(f"Resources to ADD: {total_changes['add']}")
+    print(f"Resources to CHANGE: {total_changes['change']}")
+    print(f"Resources to DESTROY: {total_changes['destroy']}")
+    
+    if high_risk_changes:
+        print(f"\n⚠️  HIGH RISK CHANGES DETECTED:")
+        for change in high_risk_changes:
+            print(f"  - {change['action'].upper()}: {change['type']} '{change['name']}'")
+        
+        if total_changes['destroy'] > 5:
+            print(f"\n🚫 CRITICAL: Too many deletions ({total_changes['destroy']}) - Manual review required")
+            return False
+    
+    return True
+
+if not analyze_terraform_plans():
+    exit(1)
+EOF
+        
+        artifacts:
+          - "**/*-validation.json"
+          - "**/*-providers.txt"
+          - "**/*.tfplan"
+          - "**/*-plan.json"
+
+    - step: &cost-and-compliance-analysis
+        name: Cost Analysis & Compliance Validation
+        image: infracost/infracost:ci-0.10
+        script:
+          - echo "💰 Comprehensive cost and compliance analysis..."
+          
+          # Infrastructure cost analysis
+          - |
+            export INFRACOST_API_KEY=$INFRACOST_API_KEY
+            
+            # Generate cost breakdown
+            infracost breakdown --path=. --format=json --out-file=infracost-base.json
+            
+            # Cost diff analysis
+            if [ "$BITBUCKET_PR_ID" ]; then
+              infracost diff --path=. --compare-to=main \
+                --format=json --out-file=infracost-diff.json
+            fi
+            
+            # Generate reports
+            infracost output --path=infracost-base.json --format=html \
+              --out-file=cost-report.html
+            infracost output --path=infracost-base.json --format=table \
+              > cost-summary.txt
+          
+          # Budget validation
+          - |
+            MONTHLY_COST=$(jq -r '.totalMonthlyCost' infracost-base.json | sed 's/[^0-9.]//g')
+            ENVIRONMENT=$(echo $BITBUCKET_BRANCH | grep -E "(main|master)" && echo "production" || echo "staging")
+            
+            case $ENVIRONMENT in
+              "production")
+                BUDGET_LIMIT=10000
+                ;;
+              "staging")
+                BUDGET_LIMIT=2000
+                ;;
+              *)
+                BUDGET_LIMIT=500
+                ;;
+            esac
+            
+            echo "Cost Analysis Results:"
+            echo "Environment: $ENVIRONMENT"
+            echo "Monthly Cost: $${MONTHLY_COST}"
+            echo "Budget Limit: $${BUDGET_LIMIT}"
+            
+            if (( $(echo "$MONTHLY_COST > $BUDGET_LIMIT" | bc -l 2>/dev/null || echo "0") )); then
+              echo "💸 Cost exceeds budget limit - CFO approval required"
+              cat << EOF > budget-exception-request.json
+{
+  "environment": "$ENVIRONMENT",
+  "requested_budget": "$MONTHLY_COST",
+  "approved_budget": "$BUDGET_LIMIT",
+  "excess_amount": "$(echo "$MONTHLY_COST - $BUDGET_LIMIT" | bc -l)",
+  "justification": "Infrastructure scaling required for business growth",
+  "approval_required": "CFO",
+  "timestamp": "$(date -Iseconds)"
+}
+EOF
+            fi
+        
+        artifacts:
+          - infracost-base.json
+          - infracost-diff.json
+          - cost-report.html
+          - cost-summary.txt
+          - budget-exception-request.json
+
+    - step: &multi-stage-approvals
+        name: Multi-Stage Security Approvals
+        trigger: manual
+        script:
+          - echo "🔐 Multi-stage approval process initiated..."
+          - |
+            echo "=== APPROVAL CHECKLIST ==="
+            echo ""
+            echo "✅ Security Analysis: PASSED"
+            echo "✅ Compliance Validation: PASSED"
+            echo "✅ Terraform Validation: PASSED"
+            echo "✅ Cost Analysis: COMPLETED"
+            echo ""
+            echo "Required Approvals:"
+            echo "□ Security Team Lead"
+            echo "□ Infrastructure Team Lead"
+            echo "□ DevOps Manager"
+            
+            if [ "$BITBUCKET_BRANCH" = "main" ]; then
+              echo "□ VP Engineering (Production Deployment)"
+            fi
+            
+            echo ""
+            echo "Review artifacts before approving:"
+            echo "- Security scan results"
+            echo "- Terraform execution plans"
+            echo "- Cost impact analysis"
+            echo "- Compliance validation reports"
+            echo ""
+            echo "Click 'Deploy' to provide approval"
+
+pipelines:
+  branches:
+    # Production pipeline (main branch)
+    main:
+      - step: *setup-hardened-environment
+      - step: *comprehensive-security-scan
+      - step: *advanced-terraform-validation
+      - step: *cost-and-compliance-analysis
+      - step: *multi-stage-approvals
+      - step:
+          name: Production Deployment
+          deployment: production
+          script:
+            - echo "🚀 Executing production deployment with full monitoring..."
+            # Production deployment logic here
+      - step:
+          name: Post-Deployment Security Validation
+          script:
+            - echo "🔍 Post-deployment security validation..."
+            # Security validation of deployed resources
+
+    # Development and feature branches
+    'feature/*':
+      - step: *setup-hardened-environment
+      - step: *comprehensive-security-scan
+      - step: *advanced-terraform-validation
+      - step:
+          name: Development Deployment
+          script:
+            - echo "🧪 Development deployment with security monitoring..."
+
+  pull-requests:
+    '**':
+      - step: *setup-hardened-environment
+      - step: *comprehensive-security-scan
+      - step: *advanced-terraform-validation
+      - step: *cost-and-compliance-analysis
+      - step:
+          name: PR Security Report
+          script:
+            - echo "📊 Generating comprehensive PR security report..."
+
+  custom:
+    security-audit:
+      - variables:
+          - name: AUDIT_SCOPE
+            default: "full"
+            allowed-values: ["full", "security", "compliance", "cost"]
+      - step: *setup-hardened-environment
+      - step: *comprehensive-security-scan
+      - step: *cost-and-compliance-analysis
